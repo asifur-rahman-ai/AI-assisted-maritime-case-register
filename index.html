@@ -1,0 +1,2731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maritime Job Register — Demo</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --navy:#152038;
+    --navy-2:#ffffff;
+    --accent:#2596BE;
+    --accent-dim:#1c7495;
+    --glass-bg:rgba(21,32,56,0.035);
+    --glass-border:rgba(21,32,56,0.12);
+    --text:#152038;
+    --text-dim:#5b6b85;
+    --ok:#1e8f57;
+    --warn:#b4790e;
+    --danger:#c23c46;
+    --paper:#f5f7fb;
+    --paper-line:#dde3ee;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family: Calibri, "Segoe UI", Arial, sans-serif;
+    background:
+      radial-gradient(circle at 15% 0%, rgba(37,150,190,0.06) 0%, transparent 45%),
+      radial-gradient(circle at 90% 10%, rgba(21,32,56,0.04) 0%, transparent 40%),
+      #f4f6fa;
+    color:var(--text);
+    min-height:100vh;
+  }
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 28px;
+    border-bottom:1px solid var(--glass-border);
+    background:rgba(255,255,255,0.75);
+    backdrop-filter:blur(10px);
+    position:sticky;top:0;z-index:50;
+    flex-wrap:wrap;gap:12px;
+  }
+  .brand{display:flex;align-items:center;gap:12px;}
+  .brand .mark{
+    width:38px;height:38px;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    font-weight:700;color:#fff;font-size:15px;letter-spacing:0.5px;
+    border-radius:0;
+  }
+  .brand h1{font-size:18px;margin:0;font-weight:700;letter-spacing:0.3px;}
+  .brand p{margin:0;font-size:12px;color:var(--text-dim);}
+  .user-badge{font-size:12.5px;color:var(--text-dim);padding:8px 4px;}
+  .user-badge b{color:var(--accent);}
+  .topbar-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  button, .btn{
+    font-family:inherit;cursor:pointer;border:1px solid var(--glass-border);
+    background:#fff;color:var(--text);
+    padding:10px 16px;font-size:13px;border-radius:0;
+    transition:background .15s ease, border-color .15s ease, transform .05s ease;
+  }
+  button:hover,.btn:hover{background:#eef3f8;border-color:var(--accent);}
+  button:active{transform:translateY(1px);}
+  .btn-primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600;}
+  .btn-primary:hover{background:var(--accent-dim);}
+  .btn-ghost{background:transparent;}
+  .btn-small{padding:6px 10px;font-size:12px;}
+  .btn-danger{border-color:var(--danger);color:var(--danger);}
+  .btn-danger:hover{background:rgba(194,60,70,.10);}
+
+  /* ---------- Layout ---------- */
+  .wrap{max-width:1500px;margin:0 auto;padding:24px 28px 60px;}
+
+  .stats{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-bottom:22px;}
+  @media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr);}}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr);}}
+  .stat{
+    background:var(--glass-bg);border:1px solid var(--glass-border);
+    padding:16px;border-radius:0;position:relative;overflow:hidden;
+  }
+  .stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--accent);}
+  .stat .num{font-size:26px;font-weight:700;line-height:1;}
+  .stat .label{font-size:11.5px;color:var(--text-dim);margin-top:6px;letter-spacing:.3px;text-transform:uppercase;}
+  .stat-clickable{cursor:pointer;transition:transform .12s ease, box-shadow .12s ease, background .12s ease;}
+  .stat-clickable:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(21,32,56,0.12);background:rgba(37,150,190,0.06);}
+  .stat-clickable:active{transform:translateY(0);}
+  .stat.warn::before{background:var(--warn);}
+  .stat.danger::before{background:var(--danger);}
+  .stat.ok::before{background:var(--ok);}
+
+  .panel{
+    background:var(--glass-bg);border:1px solid var(--glass-border);
+    padding:18px;margin-bottom:20px;
+  }
+  .panel h2{margin:0 0 14px;font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+  .panel h2 .tag{font-size:10.5px;background:var(--accent);color:#fff;padding:2px 7px;letter-spacing:.4px;text-transform:uppercase;font-weight:700;}
+
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px;}
+  .toolbar input[type=text], .toolbar select{
+    font-family:inherit;background:#fff;
+    border:1px solid var(--glass-border);color:var(--text);
+    padding:9px 12px;font-size:13px;border-radius:0;
+    flex:1 1 200px;min-width:200px;
+    box-sizing:border-box;height:38px;line-height:1.2;
+    -webkit-appearance:none;appearance:none;
+    outline:none;box-shadow:none;
+  }
+  .toolbar select{
+    background-image:url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%235b6b85'%3E%3Cpath d='M5.5 7.5l4.5 4.5 4.5-4.5' stroke='%235b6b85' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 10px center;background-size:14px;
+    padding-right:30px;
+  }
+  .toolbar input[type=text]:focus, .toolbar select:focus{border-color:var(--accent);}
+  .toolbar input::placeholder{color:var(--text-dim);}
+  .toolbar .search-box{flex:1 1 200px;min-width:200px;position:relative;}
+  .toolbar .search-box input{width:100%;min-width:0;}
+  .spacer{flex:1;}
+
+  table{width:100%;border-collapse:collapse;font-size:13px;}
+  thead th{
+    text-align:left;padding:10px 10px;border-bottom:2px solid var(--accent);
+    color:var(--text-dim);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;
+    cursor:pointer;user-select:none;white-space:nowrap;
+  }
+  thead th:hover{color:var(--accent);}
+  tbody td{padding:10px 10px;border-bottom:1px solid var(--glass-border);vertical-align:top;}
+  tbody td:last-child{white-space:nowrap;}
+  .row-edit-btn, .row-delete-btn{padding:5px 9px;font-size:11.5px;}
+  tbody tr{transition:background .12s;}
+  tbody tr:hover{background:rgba(21,32,56,0.035);cursor:pointer;}
+  .vessel-cell{font-weight:600;}
+  .instr-cell{color:var(--text-dim);max-width:280px;}
+  .pill{display:inline-block;padding:3px 9px;font-size:11px;font-weight:600;border-radius:0;letter-spacing:.2px;white-space:nowrap;}
+  .pill-ok{background:rgba(30,143,87,.10);color:#166a41;border:1px solid rgba(30,143,87,.35);}
+  .pill-warn{background:rgba(180,121,14,.10);color:#8a5c0b;border:1px solid rgba(180,121,14,.35);}
+  .pill-danger{background:rgba(194,60,70,.10);color:#a12e37;border:1px solid rgba(194,60,70,.35);}
+  .pill-muted{background:rgba(21,32,56,0.05);color:var(--text-dim);border:1px solid var(--glass-border);}
+
+  .table-scroll{overflow-x:auto;}
+  .empty-state{padding:40px 10px;text-align:center;color:var(--text-dim);font-size:13px;}
+
+  .pager{display:flex;justify-content:space-between;align-items:center;margin-top:14px;font-size:12.5px;color:var(--text-dim);}
+  .pager .pages{display:flex;gap:6px;}
+
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(21,32,56,0.45);backdrop-filter:blur(3px);
+    display:none;align-items:flex-start;justify-content:center;z-index:200;padding:40px 16px;overflow-y:auto;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:#ffffff;
+    border:1px solid var(--glass-border);
+    box-shadow:0 20px 50px rgba(21,32,56,0.18);
+    width:100%;max-width:760px;padding:26px;position:relative;
+  }
+  .modal h3{margin:0 0 4px;font-size:17px;}
+  .modal .sub{color:var(--text-dim);font-size:12.5px;margin-bottom:18px;}
+  .modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text-dim);font-size:20px;cursor:pointer;padding:4px 8px;}
+  .modal-close:hover{color:var(--text);}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-grid .full{grid-column:1/-1;}
+  .field label{display:block;font-size:11.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);margin-bottom:6px;}
+  .field input, .field select, .field textarea{
+    width:100%;font-family:inherit;background:#fff;
+    border:1px solid var(--glass-border);color:var(--text);
+    padding:10px 11px;font-size:13.5px;border-radius:0;
+  }
+  .field textarea{resize:vertical;min-height:56px;}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--accent);}
+  .modal-actions{display:flex;justify-content:space-between;align-items:center;margin-top:22px;gap:10px;flex-wrap:wrap;}
+
+  .ai-box{
+    margin-top:8px;border:1px dashed rgba(37,150,190,.55);
+    background:rgba(37,150,190,.08);padding:10px 12px;font-size:12.5px;
+    display:none;
+  }
+  .ai-box.show{display:block;}
+  .ai-box .ai-title{color:var(--accent);font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .ai-chip{display:inline-block;background:rgba(37,150,190,.22);border:1px solid rgba(37,150,190,.5);color:#bfe6f5;padding:3px 9px;margin:3px 4px 0 0;font-size:11.5px;cursor:pointer;}
+  .ai-chip:hover{background:rgba(37,150,190,.4);}
+  .similar-item{padding:6px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;color:var(--text-dim);}
+  .similar-item b{color:var(--text);}
+
+  .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 22px;font-size:13px;margin-top:6px;}
+  .detail-grid .k{color:var(--text-dim);font-size:11px;text-transform:uppercase;letter-spacing:.3px;}
+  .detail-grid .v{margin-top:2px;}
+  .detail-grid .full{grid-column:1/-1;}
+
+  .rel-section{margin-top:22px;padding-top:16px;border-top:1px solid var(--glass-border);}
+  .rel-section h4{margin:0 0 10px;font-size:14px;display:flex;align-items:center;gap:8px;}
+  .tag-mini{font-size:10px;color:var(--text-dim);font-weight:400;text-transform:none;}
+  .rel-item{
+    display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+    padding:8px 10px;border:1px solid var(--glass-border);margin-bottom:6px;font-size:12.5px;background:rgba(21,32,56,0.02);
+  }
+  .rel-item .rel-main{flex:1;}
+  .rel-item .rel-main b{display:inline-block;margin-right:6px;}
+  .rel-item .rel-actions{white-space:nowrap;display:flex;gap:6px;}
+  .rel-item .rel-actions button{padding:4px 8px;font-size:11px;}
+  .rel-empty{color:var(--text-dim);font-size:12.5px;padding:6px 0 12px;}
+  .rel-add-form{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;
+    margin-top:10px;padding:10px;background:rgba(21,32,56,0.03);border:1px dashed var(--glass-border);
+  }
+  .rel-add-form input, .rel-add-form select{
+    font-family:inherit;background:#fff;border:1px solid var(--glass-border);
+    padding:8px 9px;font-size:12.5px;border-radius:0;color:var(--text);
+  }
+  .rel-add-form button{grid-column:1/-1;}
+  .file-upload-row{grid-column:1/-1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+  .file-upload-row input[type=file]{flex:0 0 auto;max-width:180px;font-size:11.5px;padding:6px;}
+  .file-upload-row input[type=text]{flex:1;min-width:180px;}
+  .upload-status{font-size:11px;color:var(--accent);grid-column:1/-1;}
+
+  .insights-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:16px 0 22px;}
+  .insights-kpis .kpi{background:rgba(21,32,56,0.03);border:1px solid var(--glass-border);padding:14px;text-align:center;}
+  .insights-kpis .kpi .n{font-size:22px;font-weight:700;color:var(--navy);}
+  .insights-kpis .kpi .l{font-size:11px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.3px;margin-top:4px;}
+  .insights-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px;}
+  @media(max-width:760px){.insights-grid{grid-template-columns:1fr;}}
+  .insight-card{background:rgba(21,32,56,0.02);border:1px solid var(--glass-border);padding:14px;height:260px;display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box;}
+  .insight-card.wide{grid-column:1/-1;height:280px;}
+  .growth-card{height:auto;min-height:280px;}
+  .growth-body{display:flex;gap:18px;flex:1;min-height:0;}
+  .growth-chart-wrap{flex:1.3;min-height:220px;position:relative;}
+  .growth-recs{flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;overflow-y:auto;}
+  .growth-recs .rec-item{
+    background:rgba(37,150,190,0.06);border-left:3px solid var(--accent);
+    padding:8px 10px;font-size:12px;line-height:1.45;color:var(--text);
+  }
+  .growth-recs .rec-item b{color:var(--navy);}
+  .insight-card h5{margin:0 0 10px;font-size:12.5px;text-transform:uppercase;letter-spacing:.3px;color:var(--text-dim);flex:0 0 auto;}
+  .insight-card .chart-wrap{position:relative;flex:1 1 auto;min-height:0;width:100%;}
+  .insight-card canvas{position:absolute;top:0;left:0;width:100% !important;height:100% !important;}
+
+  .toast{
+    position:fixed;bottom:24px;right:24px;background:var(--navy-2);
+    border:1px solid var(--accent);padding:12px 18px;font-size:13px;
+    z-index:300;opacity:0;transform:translateY(10px);transition:all .25s;pointer-events:none;
+  }
+  .toast.show{opacity:1;transform:translateY(0);}
+
+  footer{text-align:center;color:var(--text-dim);font-size:11.5px;padding:20px 0 6px;}
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.45);border-radius:6px;}
+  ::-webkit-scrollbar-thumb:hover{background:rgba(0,0,0,.65);}
+  ::-webkit-scrollbar-track{background:transparent;}
+  html{scrollbar-color:rgba(0,0,0,.45) transparent;scrollbar-width:thin;}
+
+  /* ---------- Mobile ---------- */
+  @media(max-width:720px){
+    .topbar{padding:12px 14px;flex-direction:column;align-items:stretch;gap:10px;}
+    .brand{gap:10px;}
+    .brand .mark{width:34px;height:34px;font-size:13px;}
+    .brand h1{font-size:15.5px;}
+    .brand p{font-size:11px;}
+    .topbar-actions{width:100%;gap:8px;}
+    .topbar-actions button, .topbar-actions .btn{flex:1 1 auto;font-size:12.5px;padding:10px 10px;min-height:40px;}
+    .topbar-actions .user-badge{flex:1 1 100%;text-align:center;padding:6px 0;}
+
+    .wrap{padding:14px 12px 40px;}
+    .panel{padding:12px;}
+    .panel h2{font-size:14px;}
+    .panel h2 #btnEnableNotif{float:none;display:block;width:100%;margin-top:8px;}
+
+    .stat{padding:12px;}
+    .stat .num{font-size:19px;}
+    .stat .label{font-size:10.5px;}
+
+    .toolbar{gap:8px;}
+    .toolbar input[type=text], .toolbar select, .toolbar .search-box{flex:1 1 100%;min-width:0;}
+    .spacer{display:none;}
+    #resultCount{width:100%;display:block;}
+
+    table{font-size:12px;}
+    thead th, tbody td{padding:8px 8px;}
+    .instr-cell{max-width:150px;}
+    tbody td:last-child{white-space:normal;}
+    .row-edit-btn, .row-delete-btn{margin-bottom:4px;}
+    /* keep the first column visible as a landmark while scrolling the wide table sideways */
+    thead th:first-child, tbody td:first-child{
+      position:sticky;left:0;z-index:2;background:#fdfdfe;
+      box-shadow:2px 0 5px rgba(21,32,56,0.10);
+    }
+    tbody tr:hover td:first-child{background:#eef3f8;}
+
+    .pager{flex-direction:column;gap:10px;align-items:stretch;}
+    .pager .pages{justify-content:stretch;}
+    .pager .pages button{flex:1;padding:11px 10px;}
+
+    .modal-overlay{padding:0;align-items:stretch;}
+    .modal{max-width:100%;min-height:100%;padding:18px 14px;border:none;}
+    .modal-close{top:12px;right:10px;font-size:24px;padding:6px 10px;}
+    .form-grid{grid-template-columns:1fr;gap:12px;}
+    .detail-grid{grid-template-columns:1fr;gap:10px;}
+    .rel-add-form{grid-template-columns:1fr;}
+    .file-upload-row{flex-direction:column;align-items:stretch;}
+    .file-upload-row input[type=file]{max-width:100%;}
+    .modal-actions{flex-direction:column-reverse;align-items:stretch;}
+    .modal-actions button, .modal-actions .btn{width:100%;min-height:42px;}
+
+    .insights-kpis{grid-template-columns:repeat(2,1fr);}
+    .growth-body{flex-direction:column;}
+    .insight-card{height:auto;}
+    .insight-card.wide{height:auto;}
+    .insight-card canvas{position:relative;height:220px !important;}
+
+    button, .btn{min-height:38px;}
+
+    /* ---- Step-by-step job form (mobile only) ---- */
+    .step-nav{display:flex;flex-direction:column;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--glass-border);}
+    .step-dots{display:flex;justify-content:center;gap:6px;}
+    .step-dot{width:7px;height:7px;border-radius:50%;background:var(--glass-border);}
+    .step-dot.active{background:var(--accent);width:18px;border-radius:4px;}
+    .step-buttons{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+    .step-buttons #stepLabel{flex:1;text-align:center;}
+    .step-buttons button{flex:0 0 auto;min-width:96px;}
+    .form-step{display:none;}
+    .form-step.active{display:block;}
+    #jobForm .modal-actions{display:none;}
+    #jobForm.step-final .modal-actions{display:flex;}
+  }
+  @media(min-width:721px){
+    .step-nav{display:none;}
+  }
+
+  .demo-banner{background:#fff7e0;border-bottom:1px solid #e0c060;color:#5a4300;font-size:12.5px;padding:8px 16px;text-align:center;line-height:1.5;}
+  .demo-banner b{color:#152038;}
+</style>
+</head>
+<body>
+<div class="demo-banner"><b>Demo mode</b> — every record here is fictional sample data. To try editing, click <b>Login</b> and use <b>Demo Admin</b> with PIN <b>1234</b>. Changes stay in your own browser only.</div>
+
+
+<div class="topbar">
+  <div class="brand">
+    <div class="mark">AM</div>
+    <div>
+      <h1>Maritime Job Register</h1>
+      <p>AI-assisted case &amp; job tracking — interactive demo with sample data</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <span id="syncBadge" class="user-badge"></span>
+    <button class="btn" id="btnInsights">📊 Insights</button>
+    <span id="userBadge" class="user-badge"></span>
+    <button class="btn" id="btnLogin">🔒 Login</button>
+    <button class="btn" id="btnManageUsers" style="display:none;">Manage Access</button>
+    <button class="btn" id="btnManageCategories" style="display:none;">Manage Categories</button>
+    <button class="btn" id="btnExport">Export CSV</button>
+    <button class="btn" id="btnImport" style="display:none;">Import CSV</button>
+    <input type="file" id="fileImport" accept=".csv" style="display:none;">
+    <button class="btn btn-primary" id="btnNew">+ New Job</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+  <div class="stats" id="statsRow"></div>
+  <div class="stats" id="statsRow2" style="margin-top:14px;"></div>
+
+  <div class="panel">
+    <h2>Attention Needed <span class="tag">AI Flags</span>
+      <button id="btnEnableNotif" class="btn btn-sm" style="float:right;font-size:11px;padding:4px 10px;" onclick="requestExpiryNotifPermission()">🔔 Enable Expiry Alerts</button>
+    </h2>
+    <div id="alertsBox" class="detail-grid" style="grid-template-columns:1fr;"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Recent Activity <span class="tag">Audit Log</span></h2>
+    <div id="activityBox" class="detail-grid" style="grid-template-columns:1fr;"></div>
+  </div>
+
+  <div class="panel" id="jobRecordsPanel">
+    <h2>Job Records</h2>
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Search vessel, instruction, client, job no, admiralty suit...">
+      </div>
+      <select id="filterFileStatus">
+        <option value="">File Status: All</option>
+        <option value="RUNNING">Running</option>
+        <option value="CLOSED">Closed</option>
+      </select>
+      <select id="filterInvoiceStatus">
+        <option value="">Invoice: All</option>
+        <option value="issued">Issued</option>
+        <option value="not issued">Not Issued</option>
+        <option value="received">Received</option>
+        <option value="not received">Not Received</option>
+      </select>
+      <select id="filterCategory">
+        <option value="">Category: All</option>
+      </select>
+      <div class="spacer"></div>
+      <span style="font-size:12px;color:var(--text-dim);" id="resultCount"></span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th data-sort="jobNo">Job No</th>
+            <th data-sort="date">Date</th>
+            <th data-sort="vessel">Vessel / Subject</th>
+            <th data-sort="instruction">Instruction</th>
+            <th data-sort="category">Category</th>
+            <th data-sort="client">Principal Client</th>
+            <th data-sort="secondaryClient">Secondary Client</th>
+            <th data-sort="admiraltySuit">Admiralty Suit</th>
+            <th data-sort="securityType">Security</th>
+            <th data-sort="fileStatus">File Status</th>
+            <th data-sort="invoiceStatus">Invoice</th>
+            <th id="actionsColHeader">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty-state" id="emptyState" style="display:none;">No jobs match your filters.</div>
+    </div>
+    <div class="pager">
+      <span id="pageInfo"></span>
+      <div class="pages">
+        <button class="btn btn-small" id="prevPage">← Prev</button>
+        <button class="btn btn-small" id="nextPage">Next →</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Maritime Job Register demo · all data shown is fictional · changes are stored only in your own browser</footer>
+</div>
+
+<!-- Insights Modal -->
+<div class="modal-overlay" id="insightsOverlay">
+  <div class="modal" style="max-width:1100px;">
+    <button class="modal-close" id="insightsCloseBtn">&times;</button>
+    <h3>📊 System Insights</h3>
+    <div class="sub">At-a-glance overview of the full job register, documents, and correspondence.</div>
+
+    <div class="insights-kpis" id="insightsKpis"></div>
+
+    <div class="insights-grid">
+      <div class="insight-card">
+        <h5>Claims / Legal / Others</h5>
+        <div class="chart-wrap"><canvas id="chartCategory"></canvas></div>
+      </div>
+      <div class="insight-card">
+        <h5>File Status</h5>
+        <div class="chart-wrap"><canvas id="chartFileStatus"></canvas></div>
+      </div>
+      <div class="insight-card">
+        <h5>Invoice Status</h5>
+        <div class="chart-wrap"><canvas id="chartInvoiceStatus"></canvas></div>
+      </div>
+      <div class="insight-card">
+        <h5>Top 8 Principal Clients</h5>
+        <div class="chart-wrap"><canvas id="chartClients"></canvas></div>
+      </div>
+      <div class="insight-card wide">
+        <h5>Jobs Per Year <span class="tag-mini">by Claims / Legal / Others</span></h5>
+        <div class="chart-wrap"><canvas id="chartYearly"></canvas></div>
+      </div>
+      <div class="insight-card">
+        <h5>Documents by Type</h5>
+        <div class="chart-wrap"><canvas id="chartDocTypes"></canvas></div>
+      </div>
+      <div class="insight-card">
+        <h5>Document Status</h5>
+        <div class="chart-wrap"><canvas id="chartDocStatus"></canvas></div>
+      </div>
+      <div class="insight-card wide growth-card">
+        <h5>📈 Growth Outlook &amp; Recommendations <span class="tag-mini">Projected next 2 years, based on historical trend</span></h5>
+        <div class="growth-body">
+          <div class="chart-wrap growth-chart-wrap"><canvas id="chartGrowth"></canvas></div>
+          <div id="growthRecommendations" class="growth-recs"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Login Modal -->
+<div class="modal-overlay" id="loginOverlay">
+  <div class="modal" style="max-width:400px;">
+    <button class="modal-close" id="loginCloseBtn">&times;</button>
+    <h3>Login</h3>
+    <div class="sub">Only recognized users can edit or delete jobs.</div>
+    <div class="field" style="margin-bottom:14px;">
+      <label>Name</label>
+      <select id="loginUserSelect"></select>
+    </div>
+    <div class="field">
+      <label>PIN</label>
+      <input type="password" id="loginPin" placeholder="Enter PIN" inputmode="numeric">
+    </div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button type="button" class="btn btn-primary" id="loginSubmitBtn">Login</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Users Modal -->
+<div class="modal-overlay" id="usersOverlay">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" id="usersCloseBtn">&times;</button>
+    <h3>Manage Access</h3>
+    <div class="sub">Add or remove people who are allowed to edit/delete jobs. PINs are stored locally in this browser only.</div>
+    <div id="usersList" style="margin-bottom:18px;"></div>
+    <div class="form-grid">
+      <div class="field"><label>Name</label><input type="text" id="newUserName" placeholder="e.g. Jane Doe"></div>
+      <div class="field"><label>PIN</label><input type="text" id="newUserPin" placeholder="e.g. 1234"></div>
+    </div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button type="button" class="btn btn-primary" id="addUserBtn">+ Add User</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage Categories Modal -->
+<div class="modal-overlay" id="categoriesOverlay">
+  <div class="modal" style="max-width:560px;">
+    <button class="modal-close" id="categoriesCloseBtn">&times;</button>
+    <h3>Manage Categories</h3>
+    <div class="sub">Rename or remove job categories, or add new ones. Renaming updates every job already using that category.</div>
+    <div id="categoriesList" style="margin-bottom:18px;"></div>
+    <div class="form-grid">
+      <div class="field"><label>New Category Name</label><input type="text" id="newCategoryName" placeholder="e.g. Consultancy"></div>
+    </div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button type="button" class="btn btn-primary" id="addCategoryBtn">+ Add Category</button>
+    </div>
+  </div>
+</div>
+
+<!-- New / Edit Job Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" style="max-width:920px;">
+    <button class="modal-close" id="modalCloseBtn">&times;</button>
+    <h3 id="modalTitle">New Job</h3>
+    <div class="sub">Fill in what you know — AI will suggest a category and flag similar past jobs.</div>
+    <form id="jobForm">
+      <div class="step-nav">
+        <div class="step-dots" id="jobFormStepDots"></div>
+        <div class="step-buttons">
+          <button type="button" class="btn btn-small" id="stepPrevBtn">← Back</button>
+          <span id="stepLabel" style="font-size:12px;color:var(--text-dim);"></span>
+          <button type="button" class="btn btn-small btn-primary" id="stepNextBtn">Next →</button>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="1">
+        <div class="form-grid">
+          <div class="field"><label>Job No</label><input type="text" id="f_jobNo" placeholder="e.g. 692"></div>
+          <div class="field"><label>Date</label><input type="text" id="f_date" placeholder="e.g. 7/13/2026"></div>
+          <div class="field full"><label>Vessel / Subject Matter</label><input type="text" id="f_vessel" placeholder="e.g. MV EXAMPLE STAR"></div>
+          <div class="field full">
+            <label>Instruction / Description</label>
+            <textarea id="f_instruction" placeholder="e.g. Arrest & release of the vessel for unpaid bunker claim"></textarea>
+            <div class="ai-box" id="aiCategoryBox">
+              <div class="ai-title">⚡ AI Suggestion</div>
+              <div id="aiCategoryChips"></div>
+            </div>
+            <div class="ai-box" id="aiSimilarBox">
+              <div class="ai-title">⚡ Similar Past Jobs</div>
+              <div id="aiSimilarList"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="2">
+        <div class="form-grid">
+          <div class="field"><label>Category</label>
+            <select id="f_category"></select>
+          </div>
+          <div class="field"><label>Principal Client</label><input type="text" id="f_client" placeholder="e.g. Northwind P&I Club"></div>
+          <div class="field"><label>Secondary Client</label><input type="text" id="f_secondaryClient" placeholder="e.g. Owners' local agent"></div>
+          <div class="field"><label>Admiralty Suit No</label><input type="text" id="f_admiraltySuit" placeholder="e.g. 12 of 2026"></div>
+          <div class="field"><label>File Status</label>
+            <select id="f_fileStatus">
+              <option value="">—</option>
+              <option value="RUNNING">Running</option>
+              <option value="CLOSED">Closed</option>
+            </select>
+          </div>
+          <div class="field"><label>Invoice Type</label>
+            <select id="f_invoiceType">
+              <option value="">—</option>
+              <option value="Interim">Interim Invoice</option>
+              <option value="Final">Final Invoice</option>
+            </select>
+          </div>
+          <div class="field"><label>Invoice Status</label>
+            <select id="f_invoiceStatus">
+              <option value="">—</option>
+              <option value="ISSUED">Issued</option>
+              <option value="NOT ISSUED">Not Issued</option>
+              <option value="RECEIVED">Issued & Received</option>
+              <option value="ISSUED BUT NOT RECEIVED">Issued but Not Received</option>
+            </select>
+          </div>
+          <div class="field"><label>Invoice Amount</label><input type="text" id="f_invoiceAmount" placeholder="e.g. $8,000.00"></div>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="3">
+        <div class="form-grid">
+          <div class="field"><label>Security</label>
+            <select id="f_securityType">
+              <option value="">—</option>
+              <option value="Letter of Undertaking">Letter of Undertaking</option>
+              <option value="Bank Guarantee">Bank Guarantee</option>
+            </select>
+          </div>
+          <div class="field"><label>LoU / BG Amount</label><input type="text" id="f_bgAmount" placeholder="e.g. $9,500.00"></div>
+          <div class="field"><label>Security Expiry Date</label><input type="text" id="f_securityExpiryDate" placeholder="e.g. 7/13/2026"></div>
+          <div class="field"><label>Instructing Party</label><input type="text" id="f_instructingParty" placeholder="e.g. Harbor Mutual Insurance"></div>
+          <div class="field"><label>Person In Charge</label><input type="text" id="f_personInCharge" placeholder="e.g. Md. Rahman"></div>
+          <div class="field full"><label>Address</label><input type="text" id="f_address" placeholder="e.g. 12 Harbour Road, Sample City"></div>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="4">
+        <div class="rel-section" style="margin-top:0;padding-top:0;border-top:none;">
+          <h4>📄 Documents <span class="tag-mini">Invoice / BG / POA / Other</span></h4>
+          <div id="relJobNoHint" class="rel-empty" style="display:none;">Enter Job No first — then documents can be added.</div>
+          <div id="docsList"></div>
+          <div class="rel-add-form" id="docsAddForm">
+            <select id="doc_type">
+              <option>Invoice</option><option>Bank Guarantee</option><option>Power of Attorney</option><option>Other</option>
+            </select>
+            <input type="text" id="doc_description" placeholder="Description">
+            <select id="doc_status">
+              <option>Pending</option><option>Issued</option><option>Received</option><option>Expired</option>
+            </select>
+            <input type="text" id="doc_amount" placeholder="Amount (optional)">
+            <input type="text" id="doc_expiry" placeholder="Expiry date (optional)">
+            <input type="text" id="doc_remarks" placeholder="Remarks (optional)">
+            <div class="file-upload-row">
+              <input type="file" id="doc_file">
+              <input type="text" id="doc_filelink" placeholder="File link (auto-filled after upload, or paste manually)">
+            </div>
+            <button type="button" class="btn btn-small btn-primary" id="btnAddDoc">+ Add Document</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="5">
+        <div class="rel-section" style="margin-top:0;padding-top:0;border-top:none;">
+          <h4>📤 Dispatch Register <span class="tag-mini">Outgoing letters/emails</span></h4>
+          <div id="dispatchList"></div>
+          <div class="rel-add-form" id="dispatchAddForm">
+            <input type="text" id="disp_date" placeholder="Date">
+            <input type="text" id="disp_to" placeholder="To">
+            <input type="text" id="disp_subject" placeholder="Subject">
+            <select id="disp_mode"><option>Email</option><option>Courier</option><option>Hand Delivery</option></select>
+            <select id="disp_replyExpected"><option value="">Reply expected?</option><option value="Yes">Yes</option><option value="No">No</option></select>
+            <select id="disp_replyReceived"><option value="">Reply received?</option><option value="Yes">Yes</option><option value="No">No</option></select>
+            <div class="file-upload-row">
+              <input type="file" id="disp_file">
+              <input type="text" id="disp_filelink" placeholder="File link (auto-filled after upload, or paste manually)">
+            </div>
+            <button type="button" class="btn btn-small btn-primary" id="btnAddDispatch">+ Add Dispatch</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-step" data-step="6">
+        <div class="rel-section" style="margin-top:0;padding-top:0;border-top:none;">
+          <h4>📥 Receive Register <span class="tag-mini">Incoming letters/emails</span></h4>
+          <div id="receiveList"></div>
+          <div class="rel-add-form" id="receiveAddForm">
+            <input type="text" id="rec_date" placeholder="Date">
+            <input type="text" id="rec_from" placeholder="From">
+            <input type="text" id="rec_subject" placeholder="Subject">
+            <input type="text" id="rec_action" placeholder="Action required">
+            <input type="text" id="rec_repliedOn" placeholder="Replied on (optional)">
+            <div class="file-upload-row">
+              <input type="file" id="rec_file">
+              <input type="text" id="rec_filelink" placeholder="File link (auto-filled after upload, or paste manually)">
+            </div>
+            <button type="button" class="btn btn-small btn-primary" id="btnAddReceive">+ Add Receive Entry</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn btn-danger" id="btnDelete" style="display:none;">Delete Job</button>
+        <div style="flex:1;"></div>
+        <button type="button" class="btn btn-ghost" id="btnCancel">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Job</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- View Job Modal -->
+<div class="modal-overlay" id="viewOverlay">
+  <div class="modal">
+    <button class="modal-close" id="viewCloseBtn">&times;</button>
+    <h3 id="viewTitle">Job</h3>
+    <div class="sub" id="viewSub"></div>
+    <div class="detail-grid" id="viewGrid"></div>
+    <div id="viewRelated"></div>
+    <div class="modal-actions">
+      <div style="flex:1;"></div>
+      <button type="button" class="btn" id="viewEditBtn">Edit</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ================= CLOUD CONFIG ================= */
+/* Paste your Google Apps Script Web App URL below (ends in /exec).
+   See Code.gs setup instructions. Leave blank to run in local-only mode. */
+const CONFIG = {
+  API_URL: "",
+};
+function cloudEnabled(){
+  return !!(CONFIG.API_URL && CONFIG.API_URL.indexOf("https://") === 0);
+}
+async function apiGet(){
+  if(!cloudEnabled()) return null;
+  try{
+    const res = await fetch(CONFIG.API_URL, { method: "GET" });
+    const data = await res.json();
+    return data && data.ok ? data : null;
+  }catch(e){
+    console.error("apiGet failed", e);
+    return null;
+  }
+}
+async function apiPost(action, payload){
+  if(!cloudEnabled()) return null;
+  try{
+    const res = await fetch(CONFIG.API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action, payload }),
+    });
+    const data = await res.json();
+    return data;
+  }catch(e){
+    console.error("apiPost failed", action, e);
+    showToast("Cloud sync failed — saved locally only");
+    return null;
+  }
+}
+
+/* ================= AI CATEGORY ENGINE (keyword based, offline) ================= */
+/* Jobs are grouped into exactly three top-level categories: Claims, Legal, Others. */
+const GROUP_CLAIMS = "Claims";
+const GROUP_LEGAL = "Legal";
+const GROUP_OTHERS = "Others";
+const DEFAULT_CATEGORY = GROUP_OTHERS;
+let ALL_CATEGORIES = [GROUP_CLAIMS, GROUP_LEGAL, GROUP_OTHERS];
+let GROUP_COLORS = { [GROUP_CLAIMS]: "#2596BE", [GROUP_LEGAL]: "#152038", [GROUP_OTHERS]: "#b4790e" };
+const CATEGORY_COLOR_PALETTE = ["#7a5cc9","#c96f9e","#4a90a4","#1e8f57","#c23c46","#e0a72e","#9aa5b8"];
+function nextCategoryColor(){
+  const used = new Set(Object.values(GROUP_COLORS));
+  const free = CATEGORY_COLOR_PALETTE.find(c=>!used.has(c));
+  return free || CATEGORY_COLOR_PALETTE[Object.keys(GROUP_COLORS).length % CATEGORY_COLOR_PALETTE.length];
+}
+
+const CATEGORY_RULES = [
+  // --- Claims: surveys, damage, cargo disputes, casualties, GA ---
+  { cat: GROUP_CLAIMS, kws: ["collision"] },
+  { cat: GROUP_CLAIMS, kws: ["crew injury","crew illness","fingerless","burn injury","sickness","master's illness","crew fingerless","injury cost","stevedore death","death investigation"] },
+  { cat: GROUP_CLAIMS, kws: ["draft survey","ullage survey","draft surveys"] },
+  { cat: GROUP_CLAIMS, kws: ["tally survey","discharge monitoring","tally & discharge","check tally"] },
+  { cat: GROUP_CLAIMS, kws: ["damage survey","derrick survey","rudder damage","damage to buoy","buoy at","reefer box"] },
+  { cat: GROUP_CLAIMS, kws: ["short landing","shortage","cargo quantity","cargo quality","wet damage","soda ash"] },
+  { cat: GROUP_CLAIMS, kws: ["general average","g.a. claim","g.a claim"] },
+  { cat: GROUP_CLAIMS, kws: ["fire at","fire ","casualty"] },
+  // --- Legal: arrest, litigation, arbitration, admiralty suits, legal opinions, regulatory penalties ---
+  { cat: GROUP_LEGAL, kws: ["arrest","release of the vessel","defending","cmp/cp"] },
+  { cat: GROUP_LEGAL, kws: ["legal opinion","representation","providing legal service","legal service"] },
+  { cat: GROUP_LEGAL, kws: ["arbitral award","enforcement of foreign award","arbitration"] },
+  { cat: GROUP_LEGAL, kws: ["admiralty suit","case handover","case takeover"] },
+  { cat: GROUP_LEGAL, kws: ["customs","penalty","seized illegal"] },
+  // --- Others: admin, consultancy, repatriation, bids/auctions, general correspondence ---
+  { cat: GROUP_OTHERS, kws: ["repatriation"] },
+  { cat: GROUP_OTHERS, kws: ["s&p consultancy","s&p","consultancy"] },
+  { cat: GROUP_OTHERS, kws: ["bid preparation","auction matter"] },
+  { cat: GROUP_OTHERS, kws: ["document delivery","observation report"] },
+];
+
+/* Maps the old, more granular category names (used before the Claims/Legal/Others
+   redesign) to their new group, so previously-saved jobs migrate cleanly. */
+const LEGACY_CATEGORY_MAP = {
+  "Vessel Arrest / Release": GROUP_LEGAL,
+  "Collision": GROUP_CLAIMS,
+  "Crew Injury / Illness": GROUP_CLAIMS,
+  "Crew Repatriation": GROUP_OTHERS,
+  "Draft / Ullage Survey": GROUP_CLAIMS,
+  "Tally / Discharge Monitoring": GROUP_CLAIMS,
+  "Damage Survey": GROUP_CLAIMS,
+  "Cargo Shortage / Quality Dispute": GROUP_CLAIMS,
+  "General Average": GROUP_CLAIMS,
+  "Legal Opinion / Representation": GROUP_LEGAL,
+  "Arbitral Award / Enforcement": GROUP_LEGAL,
+  "Customs / Penalty": GROUP_LEGAL,
+  "Fire / Casualty": GROUP_CLAIMS,
+  "S&P / Consultancy": GROUP_OTHERS,
+  "Bid / Auction": GROUP_OTHERS,
+  "Document Delivery / Admin": GROUP_OTHERS,
+  "Admiralty Suit / Case Handover": GROUP_LEGAL,
+  "General / Other": GROUP_OTHERS,
+};
+function mapLegacyCategory(oldCat){
+  if(!oldCat) return GROUP_OTHERS;
+  if(ALL_CATEGORIES.includes(oldCat)) return oldCat;
+  return LEGACY_CATEGORY_MAP[oldCat] || GROUP_OTHERS;
+}
+
+function applyCategoriesFromState(){
+  if(!STATE.categories || !STATE.categories.length) return;
+  ALL_CATEGORIES = STATE.categories.map(c=>c.name).filter(Boolean);
+  const colors = {};
+  STATE.categories.forEach(c=>{ colors[c.name] = c.color || GROUP_COLORS[c.name] || nextCategoryColor(); });
+  GROUP_COLORS = colors;
+}
+
+function suggestCategories(text){
+  const t = (text||"").toLowerCase();
+  if(!t.trim()) return [];
+  const scores = { [GROUP_CLAIMS]: 0, [GROUP_LEGAL]: 0, [GROUP_OTHERS]: 0 };
+  for(const rule of CATEGORY_RULES){
+    for(const kw of rule.kws){
+      if(t.includes(kw)) scores[rule.cat] += kw.length; // longer/more specific match = higher weight
+    }
+  }
+  return Object.entries(scores).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).map(([k])=>k);
+}
+
+function autoCategory(text){
+  const s = suggestCategories(text);
+  return s.length ? s[0] : DEFAULT_CATEGORY;
+}
+
+/* Simple word-overlap similarity for "similar past jobs" */
+function tokenize(s){
+  return (s||"").toLowerCase().replace(/[^a-z0-9\s]/g," ").split(/\s+/).filter(w=>w.length>2);
+}
+const STOPWORDS = new Set(["the","and","for","with","from","this","that","survey","vessel","instruction"]);
+function similarityScore(a,b){
+  const ta = new Set(tokenize(a).filter(w=>!STOPWORDS.has(w)));
+  const tb = new Set(tokenize(b).filter(w=>!STOPWORDS.has(w)));
+  if(ta.size===0||tb.size===0) return 0;
+  let overlap=0;
+  for(const w of ta) if(tb.has(w)) overlap++;
+  return overlap / Math.min(ta.size, tb.size);
+}
+function findSimilarJobs(text, excludeJobNo){
+  if(!text || text.trim().length<4) return [];
+  const scored = STATE.jobs
+    .filter(j=>j.jobNo!==excludeJobNo)
+    .map(j=>({job:j, score: similarityScore(text, j.instruction)}))
+    .filter(x=>x.score>0.25)
+    .sort((a,b)=>b.score-a.score)
+    .slice(0,4);
+  return scored;
+}
+
+/* ================= STATE & STORAGE ================= */
+const STORAGE_KEY = "demo_job_register_v1";
+const SESSION_KEY = "demo_current_user";
+let STATE = { jobs: [], users: [], activityLog: [], documents: [], dispatch: [], receive: [], categories: [] };
+
+function loadState(){
+  try{
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(raw){
+      STATE = JSON.parse(raw);
+      if(!STATE.users) STATE.users = [];
+      if(!STATE.activityLog) STATE.activityLog = [];
+      if(!STATE.documents) STATE.documents = [];
+      if(!STATE.dispatch) STATE.dispatch = [];
+      if(!STATE.receive) STATE.receive = [];
+      if(!STATE.categories || !STATE.categories.length) STATE.categories = ALL_CATEGORIES.map(name=>({name, color: GROUP_COLORS[name]||nextCategoryColor()}));
+      applyCategoriesFromState();
+      return true;
+    }
+  }catch(e){ console.error("load failed", e); }
+  return false;
+}
+function saveState(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(STATE));
+  }catch(e){ console.error("save failed", e); showToast("Could not save (storage full?)"); }
+}
+
+function getCurrentUser(){
+  try{ return sessionStorage.getItem(SESSION_KEY) || null; }catch(e){ return null; }
+}
+function setCurrentUser(name){
+  try{ sessionStorage.setItem(SESSION_KEY, name); }catch(e){}
+}
+function clearCurrentUser(){
+  try{ sessionStorage.removeItem(SESSION_KEY); }catch(e){}
+}
+function isLoggedIn(){ return !!getCurrentUser(); }
+
+function logActivity(action, job){
+  const entry = {
+    ts: new Date().toISOString(),
+    user: getCurrentUser() || "Unknown",
+    action,
+    jobNo: job ? job.jobNo : "",
+    vessel: job ? job.vessel : "",
+  };
+  STATE.activityLog.unshift(entry);
+  STATE.activityLog = STATE.activityLog.slice(0, 50);
+  if(cloudEnabled()) apiPost("addActivity", entry);
+}
+
+function requireLogin(){
+  if(isLoggedIn()) return true;
+  showToast("Please login first to edit or delete");
+  openLoginModal();
+  return false;
+}
+
+function seedLocalOnly(){
+  if(loadState() && STATE.jobs && STATE.jobs.length){
+    migrateAndSyncCategories();
+    return;
+  }
+  const seed = SEED_JOBS.map(j => ({
+    ...j,
+    category: autoCategory(j.instruction),
+    id: "seed-" + j.jobNo + "-" + Math.random().toString(36).slice(2,7),
+  }));
+  STATE = {
+    jobs: seed,
+    users: [
+      { name: "Demo Admin", pin: "1234" },
+    ],
+    activityLog: [],
+    documents: (window.SEED_DOCS || []),
+    dispatch: (window.SEED_DISPATCH || []),
+    receive: (window.SEED_RECEIVE || []),
+    categories: [
+      { name: GROUP_CLAIMS, color: GROUP_COLORS[GROUP_CLAIMS] },
+      { name: GROUP_LEGAL, color: GROUP_COLORS[GROUP_LEGAL] },
+      { name: GROUP_OTHERS, color: GROUP_COLORS[GROUP_OTHERS] },
+    ],
+  };
+  saveState();
+}
+
+/* One-time migration: older data used ~17 granular categories (Vessel Arrest / Release,
+   Collision, Damage Survey, ...). The system now uses exactly three top-level groups:
+   Claims / Legal / Others. This remaps any job still carrying an old category name. */
+function migrateAndSyncCategories(){
+  let changed = false;
+  STATE.jobs = STATE.jobs.map(j=>{
+    if(!ALL_CATEGORIES.includes(j.category)){
+      changed = true;
+      return { ...j, category: mapLegacyCategory(j.category) };
+    }
+    return j;
+  });
+  if(!changed) return false;
+  saveState();
+  if(cloudEnabled()){
+    showToast("Updating job categories to Claims / Legal / Others…");
+    apiPost("overwriteJobs", { jobs: STATE.jobs }).then(res=>{
+      if(res && res.ok) showToast("Categories updated in the cloud");
+    });
+  }
+  return true;
+}
+
+let cloudStatus = "offline"; // "offline" | "connecting" | "connected" | "error"
+
+async function initApp(){
+  seedLocalOnly(); // instant local render while cloud loads (or as permanent fallback)
+  populateCategoryFilter();
+  refreshAll();
+
+  if(!cloudEnabled()) return;
+  cloudStatus = "connecting";
+  renderSyncBadge();
+  const cloud = await apiGet();
+  if(cloud){
+    cloudStatus = "connected";
+    const localCount = STATE.jobs.length;
+    const cloudCount = cloud.jobs.length;
+    if(cloudCount === 0 && localCount > 0){
+      // Cloud is empty but we have local data — offer to push it up once.
+      offerCloudMigration();
+    } else if(cloudCount < localCount){
+      // Cloud has fewer jobs than this device — don't silently overwrite, ask first.
+      offerConflictChoice(cloud, localCount, cloudCount);
+    } else {
+      STATE.jobs = cloud.jobs.map(j => ({ ...j, category: j.category ? mapLegacyCategory(j.category) : autoCategory(j.instruction) }));
+      STATE.users = cloud.users.length ? cloud.users : STATE.users;
+      STATE.activityLog = cloud.activityLog || [];
+      STATE.documents = cloud.documents || [];
+      STATE.dispatch = cloud.dispatch || [];
+      STATE.receive = cloud.receive || [];
+      STATE.categories = (cloud.categories && cloud.categories.length) ? cloud.categories : STATE.categories;
+      applyCategoriesFromState();
+      saveState();
+      migrateAndSyncCategories();
+      refreshAll();
+    }
+  } else {
+    cloudStatus = "error";
+  }
+  renderSyncBadge();
+}
+
+function renderSyncBadge(){
+  const el = document.getElementById("syncBadge");
+  if(!el) return;
+  if(!cloudEnabled()){
+    el.innerHTML = `<span title="Add your Apps Script URL in CONFIG.API_URL to enable cross-device sync">💾 Local only</span>`;
+    return;
+  }
+  if(cloudStatus === "connecting") el.innerHTML = `⏳ Connecting to cloud…`;
+  else if(cloudStatus === "connected") el.innerHTML = `☁️ Synced`;
+  else el.innerHTML = `⚠️ Cloud unreachable — using local copy`;
+}
+
+function offerCloudMigration(){
+  const el = document.getElementById("syncBadge");
+  if(!el) return;
+  el.innerHTML = `☁️ Cloud is empty. <button type="button" class="btn btn-small btn-primary" id="btnPushLocal">Upload local data to cloud</button>`;
+  document.getElementById("btnPushLocal").addEventListener("click", async ()=>{
+    showToast("Uploading " + STATE.jobs.length + " jobs to cloud…");
+    const res = await apiPost("bulkImportJobs", { jobs: STATE.jobs });
+    if(res && res.ok){
+      showToast("Uploaded " + (res.imported||0) + " jobs to cloud");
+      for(const u of STATE.users){ await apiPost("addUser", u); }
+      cloudStatus = "connected";
+      renderSyncBadge();
+    } else {
+      showToast((res && res.error) ? res.error : "Upload failed");
+    }
+  });
+}
+
+function offerConflictChoice(cloud, localCount, cloudCount){
+  const el = document.getElementById("syncBadge");
+  if(!el) return;
+  el.innerHTML = `⚠️ This device has ${localCount} jobs, cloud has ${cloudCount}.
+    <button type="button" class="btn btn-small" id="btnUseCloud">Use cloud (${cloudCount})</button>
+    <button type="button" class="btn btn-small btn-primary" id="btnPushOverwrite">Keep this device's data & upload (${localCount})</button>`;
+  document.getElementById("btnUseCloud").addEventListener("click", ()=>{
+    STATE.jobs = cloud.jobs.map(j => ({ ...j, category: j.category ? mapLegacyCategory(j.category) : autoCategory(j.instruction) }));
+    STATE.users = cloud.users.length ? cloud.users : STATE.users;
+    STATE.activityLog = cloud.activityLog || [];
+    STATE.documents = cloud.documents || [];
+    STATE.dispatch = cloud.dispatch || [];
+    STATE.receive = cloud.receive || [];
+    STATE.categories = (cloud.categories && cloud.categories.length) ? cloud.categories : STATE.categories;
+    applyCategoriesFromState();
+    saveState();
+    migrateAndSyncCategories();
+    cloudStatus = "connected";
+    renderSyncBadge();
+    refreshAll();
+    showToast("Using cloud data");
+  });
+  document.getElementById("btnPushOverwrite").addEventListener("click", async ()=>{
+    if(!confirm(`This will REPLACE the cloud's ${cloudCount} job(s) with this device's ${localCount} job(s). Continue?`)) return;
+    showToast("Uploading " + localCount + " jobs to cloud…");
+    const res = await apiPost("overwriteJobs", { jobs: STATE.jobs });
+    if(res && res.ok){
+      showToast("Uploaded " + (res.imported||0) + " jobs — cloud updated");
+      cloudStatus = "connected";
+      renderSyncBadge();
+    } else {
+      showToast((res && res.error) ? res.error : "Upload failed");
+    }
+  });
+}
+
+/* ================= UI HELPERS ================= */
+function showToast(msg){
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(showToast._tm);
+  showToast._tm = setTimeout(()=>t.classList.remove("show"), 2600);
+}
+
+function normStatus(s){ return (s||"").toString().trim().toLowerCase(); }
+
+function fileStatusPill(status){
+  const s = normStatus(status);
+  if(s.includes("running")) return `<span class="pill pill-warn">Running</span>`;
+  if(s.includes("closed")) return `<span class="pill pill-ok">Closed</span>`;
+  return `<span class="pill pill-muted">—</span>`;
+}
+function invoiceStatusPill(status){
+  const s = normStatus(status);
+  if(!s) return `<span class="pill pill-muted">—</span>`;
+  if(s.includes("not received")) return `<span class="pill pill-danger">Not Received</span>`;
+  if(s.includes("received")) return `<span class="pill pill-ok">Received</span>`;
+  if(s.includes("not issued")) return `<span class="pill pill-danger">Not Issued</span>`;
+  if(s.includes("issued")) return `<span class="pill pill-warn">Issued</span>`;
+  return `<span class="pill pill-muted">${escapeHtml(status)}</span>`;
+}
+function securityTypePill(type){
+  const s = normStatus(type);
+  if(!s) return `<span class="pill pill-muted">—</span>`;
+  if(s.includes("bank")) return `<span class="pill pill-warn">Bank Guarantee</span>`;
+  if(s.includes("undertaking") || s.includes("lou")) return `<span class="pill pill-ok">LoU</span>`;
+  return `<span class="pill pill-muted">${escapeHtml(type)}</span>`;
+}
+function escapeHtml(s){
+  return (s||"").toString().replace(/[&<>"']/g, m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+}
+/* Dates are stored/typed as M/D/YYYY (or YYYY-MM-DD); this only reformats them for on-screen display. */
+function formatDateDMY(dateStr){
+  if(!dateStr) return "";
+  const s = dateStr.toString().trim();
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(mdy){
+    let [, month, day, year] = mdy;
+    if(year.length===2) year = (parseInt(year,10)<50?"20":"19")+year;
+    return `${day.padStart(2,"0")}/${month.padStart(2,"0")}/${year}`;
+  }
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(iso){
+    const [, year, month, day] = iso;
+    return `${day.padStart(2,"0")}/${month.padStart(2,"0")}/${year}`;
+  }
+  // Handles a raw JS Date.toString(), e.g. "Sat May 30 2026 00:00:00 GMT+0600 (...)"
+  // — can show up if a date cell in the linked Google Sheet was auto-formatted as a real date.
+  const MONTHS = {Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+  const verbose = s.match(/^\w{3} (\w{3}) (\d{1,2}) (\d{4})/);
+  if(verbose && MONTHS[verbose[1]]){
+    return `${verbose[2].padStart(2,"0")}/${MONTHS[verbose[1]]}/${verbose[3]}`;
+  }
+  return s;
+}
+/* Parses the same date shapes formatDateDMY understands into a plain Date (local midnight). */
+function parseDateFlexible(dateStr){
+  if(!dateStr) return null;
+  const s = dateStr.toString().trim();
+  const mdy = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+  if(mdy){
+    let [, month, day, year] = mdy;
+    if(year.length===2) year = (parseInt(year,10)<50?"20":"19")+year;
+    const d = new Date(parseInt(year,10), parseInt(month,10)-1, parseInt(day,10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const iso = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  if(iso){
+    const [, year, month, day] = iso;
+    const d = new Date(parseInt(year,10), parseInt(month,10)-1, parseInt(day,10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const MONTHS_REV = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+  const verbose = s.match(/^\w{3} (\w{3}) (\d{1,2}) (\d{4})/);
+  if(verbose && MONTHS_REV.hasOwnProperty(verbose[1])){
+    const d = new Date(parseInt(verbose[3],10), MONTHS_REV[verbose[1]], parseInt(verbose[2],10));
+    return isNaN(d.getTime()) ? null : d;
+  }
+  return null;
+}
+function daysUntil(dateStr){
+  const d = parseDateFlexible(dateStr);
+  if(!d) return null;
+  const today = new Date();
+  today.setHours(0,0,0,0);
+  d.setHours(0,0,0,0);
+  return Math.round((d.getTime()-today.getTime())/86400000);
+}
+/* Human label + urgency tier for a job's security expiry date. */
+function securityExpiryInfo(job){
+  if(!job || !job.securityExpiryDate) return null;
+  const days = daysUntil(job.securityExpiryDate);
+  if(days===null) return null;
+  let tier;
+  if(days < 0) tier = "expired";
+  else if(days <= 7) tier = "critical";
+  else if(days <= 15) tier = "high";
+  else if(days <= 30) tier = "medium";
+  else if(days <= 60) tier = "notice";
+  else tier = "ok";
+  let label;
+  if(days < 0) label = `Expired ${Math.abs(days)}d ago`;
+  else if(days === 0) label = "Expires today";
+  else label = `Expires in ${days}d`;
+  return { days, tier, label, dateLabel: formatDateDMY(job.securityExpiryDate) };
+}
+function securityExpiryLabel(job){
+  if(!job.securityExpiryDate) return "—";
+  const info = securityExpiryInfo(job);
+  return info ? `${info.dateLabel} (${info.label})` : formatDateDMY(job.securityExpiryDate);
+}
+function securityExpiryBadgeHtml(job){
+  const info = securityExpiryInfo(job);
+  if(!info) return "";
+  const colorMap = { expired:"pill-danger", critical:"pill-danger", high:"pill-warn", medium:"pill-warn", notice:"pill-muted", ok:"pill-muted" };
+  const cls = colorMap[info.tier] || "pill-muted";
+  return `<div style="margin-top:4px;"><span class="pill ${cls}" style="font-size:10px;">${escapeHtml(info.label)}</span></div>`;
+}
+
+/* ================= RENDER: STATS ================= */
+function renderStats(){
+  const jobs = STATE.jobs;
+  const total = jobs.length;
+  const running = jobs.filter(j=>normStatus(j.fileStatus).includes("running")).length;
+  const closed = jobs.filter(j=>normStatus(j.fileStatus).includes("closed")).length;
+  const invoiceNotReceived = jobs.filter(j=>{
+    const s = normStatus(j.invoiceStatus);
+    return s.includes("issued but not") || s==="not received" || (s.includes("issued") && s.includes("not") && s.includes("receiv"));
+  }).length;
+  const invoiceNotIssued = jobs.filter(j=>normStatus(j.invoiceStatus).includes("not issued")).length;
+  const legalCount = jobs.filter(j=>j.category===GROUP_LEGAL).length;
+
+  const stats = [
+    {label:"Total Jobs", num: total, cls:"", filter:"all"},
+    {label:"Running Files", num: running, cls:"warn", filter:"running"},
+    {label:"Closed Files", num: closed, cls:"ok", filter:"closed"},
+    {label:"Invoice Not Received", num: invoiceNotReceived, cls:"danger", filter:"invoiceNotReceived"},
+    {label:"Invoice Not Issued", num: invoiceNotIssued, cls:"danger", filter:"invoiceNotIssued"},
+    {label:"Legal Cases", num: legalCount, cls:"", filter:"legal"},
+  ];
+  document.getElementById("statsRow").innerHTML = stats.map(s=>`
+    <div class="stat ${s.cls} stat-clickable" data-filter="${s.filter}" title="Click to filter Job Records">
+      <div class="num">${s.num}</div>
+      <div class="label">${s.label}</div>
+    </div>`).join("");
+
+  const currentYear = new Date().getFullYear().toString();
+  const arrestCount = jobs.filter(j=> /arrest|release of the vessel/i.test(j.instruction||"") ).length;
+  const claimsCount = jobs.filter(j=>j.category===GROUP_CLAIMS).length;
+  const othersCount = jobs.filter(j=>j.category===GROUP_OTHERS).length;
+  const admiraltySuitCount = jobs.filter(j=> (j.admiraltySuit||"").trim() !== "" ).length;
+  const thisYearCount = jobs.filter(j=> extractYear(j.date) === currentYear ).length;
+  const bgCount = jobs.filter(j=> (j.bgAmount||"").trim() !== "" ).length;
+
+  const stats2 = [
+    {label:"Arrest / Release Cases", num: arrestCount, cls:"", filter:"arrest"},
+    {label:"Claims Cases", num: claimsCount, cls:"", filter:"claims"},
+    {label:"Others Cases", num: othersCount, cls:"", filter:"others"},
+    {label:"Admiralty Suit Cases", num: admiraltySuitCount, cls:"warn", filter:"admiraltySuit"},
+    {label:"This Year's Jobs", num: thisYearCount, cls:"ok", filter:"thisYear"},
+    {label:"LoU / BG Cases", num: bgCount, cls:"danger", filter:"bgAmount"},
+  ];
+  document.getElementById("statsRow2").innerHTML = stats2.map(s=>`
+    <div class="stat ${s.cls} stat-clickable" data-filter="${s.filter}" title="Click to filter Job Records">
+      <div class="num">${s.num}</div>
+      <div class="label">${s.label}</div>
+    </div>`).join("");
+
+  document.querySelectorAll(".stat-clickable").forEach(el=>{
+    el.addEventListener("click", ()=> applyStatFilter(el.dataset.filter));
+  });
+}
+
+let statCustomFilter = null;
+
+function applyStatFilter(type){
+  document.getElementById("searchInput").value = "";
+  document.getElementById("filterFileStatus").value = "";
+  document.getElementById("filterInvoiceStatus").value = "";
+  document.getElementById("filterCategory").value = "";
+  statCustomFilter = null;
+  const currentYear = new Date().getFullYear().toString();
+
+  if(type === "running") document.getElementById("filterFileStatus").value = "RUNNING";
+  else if(type === "closed") document.getElementById("filterFileStatus").value = "CLOSED";
+  else if(type === "invoiceNotReceived") document.getElementById("filterInvoiceStatus").value = "not received";
+  else if(type === "invoiceNotIssued") document.getElementById("filterInvoiceStatus").value = "not issued";
+  else if(type === "legal") document.getElementById("filterCategory").value = GROUP_LEGAL;
+  else if(type === "claims") document.getElementById("filterCategory").value = GROUP_CLAIMS;
+  else if(type === "others") document.getElementById("filterCategory").value = GROUP_OTHERS;
+  else if(type === "arrest") statCustomFilter = j => /arrest|release of the vessel/i.test(j.instruction||"");
+  else if(type === "admiraltySuit") statCustomFilter = j => (j.admiraltySuit||"").trim() !== "";
+  else if(type === "thisYear") statCustomFilter = j => extractYear(j.date) === currentYear;
+  else if(type === "bgAmount") statCustomFilter = j => (j.bgAmount||"").trim() !== "";
+  // "all" leaves every filter cleared
+  currentPage = 1;
+  renderTable();
+  document.getElementById("jobRecordsPanel")?.scrollIntoView({ behavior:"smooth", block:"start" });
+}
+
+/* ================= RENDER: ALERTS (AI-ish reminders) ================= */
+function renderAlerts(){
+  const jobs = STATE.jobs;
+  const runningOld = jobs.filter(j=>normStatus(j.fileStatus).includes("running"));
+  const invoicePending = jobs.filter(j=>{
+    const s = normStatus(j.invoiceStatus);
+    return s.includes("not issued") || s.includes("issued but not");
+  });
+  const expiring = jobs
+    .map(j=>({ job:j, info: securityExpiryInfo(j) }))
+    .filter(x=>x.info && x.info.days <= 60)
+    .sort((a,b)=>a.info.days-b.info.days);
+
+  const box = document.getElementById("alertsBox");
+  const items = [];
+  if(expiring.length){
+    const tierLabel = { expired:"EXPIRED", critical:"critical", high:"due soon", medium:"upcoming", notice:"upcoming" };
+    const rows = expiring.slice(0,10).map(x=>{
+      const j = x.job, info = x.info;
+      const colorMap = { expired:"pill-danger", critical:"pill-danger", high:"pill-warn", medium:"pill-warn", notice:"pill-muted" };
+      return `<div style="padding:3px 0;">${escapeHtml(j.vessel||j.jobNo)} (Job #${escapeHtml(j.jobNo)}) — ${escapeHtml(j.securityType||"Security")}, ${escapeHtml(info.dateLabel)} <span class="pill ${colorMap[info.tier]}" style="font-size:10px;">${escapeHtml(info.label)} · ${tierLabel[info.tier]}</span></div>`;
+    }).join("");
+    items.push(`<div><span class="k">Security Expiring (LoU / Bank Guarantee)</span><div class="v">${expiring.length} job(s) with security expiring within 60 days:${rows}</div></div>`);
+  }
+  if(runningOld.length){
+    items.push(`<div><span class="k">Open Files</span><div class="v">${runningOld.length} job(s) still marked <b>Running</b> — worth a status check: ${runningOld.slice(0,6).map(j=>escapeHtml(j.vessel||j.jobNo)).join(", ")}${runningOld.length>6?", …":""}</div></div>`);
+  }
+  if(invoicePending.length){
+    items.push(`<div><span class="k">Invoice Follow-up</span><div class="v">${invoicePending.length} job(s) have invoices not issued or not yet received: ${invoicePending.slice(0,6).map(j=>escapeHtml(j.vessel||j.jobNo)).join(", ")}${invoicePending.length>6?", …":""}</div></div>`);
+  }
+  if(!items.length){
+    box.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">Nothing urgent right now — all tracked files look up to date.</div>`;
+  } else {
+    box.innerHTML = items.join("");
+  }
+  checkExpiryNotifications(jobs);
+}
+
+/* ---- Browser push notifications for security expiry, at 60/45/30/15/7/1 days before ---- */
+const EXPIRY_NOTIFY_THRESHOLDS = [60,45,30,15,7,1];
+function requestExpiryNotifPermission(){
+  if(!("Notification" in window)){
+    showToast("This browser doesn't support notifications");
+    return;
+  }
+  Notification.requestPermission().then(perm=>{
+    if(perm === "granted"){
+      showToast("Expiry alerts enabled — you'll get a browser notification at 60/45/30/15/7/1 days before a security expires");
+      checkExpiryNotifications(STATE.jobs);
+    } else {
+      showToast("Notifications permission was not granted");
+    }
+  });
+}
+function getFiredExpiryNotifs(){
+  try{ return JSON.parse(localStorage.getItem("demo_expiry_notifs_fired")||"{}"); } catch(e){ return {}; }
+}
+function saveFiredExpiryNotifs(map){
+  try{ localStorage.setItem("demo_expiry_notifs_fired", JSON.stringify(map)); } catch(e){}
+}
+function checkExpiryNotifications(jobs){
+  if(!("Notification" in window) || Notification.permission !== "granted") return;
+  const fired = getFiredExpiryNotifs();
+  let changed = false;
+  jobs.forEach(j=>{
+    const info = securityExpiryInfo(j);
+    if(!info || !EXPIRY_NOTIFY_THRESHOLDS.includes(info.days)) return;
+    const key = `${j.id}_${info.days}`;
+    if(fired[key]) return;
+    try{
+      new Notification("Job Register Demo — Security Expiring", {
+        body: `${j.vessel||("Job #"+j.jobNo)}: ${j.securityType||"Security"} expires in ${info.days} day(s) (${info.dateLabel})`,
+        tag: key,
+      });
+    } catch(e){}
+    fired[key] = true;
+    changed = true;
+  });
+  if(changed) saveFiredExpiryNotifs(fired);
+}
+
+/* ================= FILTER / SORT / PAGINATE ================= */
+let sortKey = "jobNo", sortDir = -1, currentPage = 1, pageSize = 25;
+
+function populateCategoryFilter(){
+  const sel = document.getElementById("filterCategory");
+  sel.innerHTML = `<option value="">Category: All</option>` + ALL_CATEGORIES.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+}
+
+function getFilteredJobs(){
+  const q = document.getElementById("searchInput").value.trim().toLowerCase();
+  const fFile = document.getElementById("filterFileStatus").value;
+  const fInv = document.getElementById("filterInvoiceStatus").value;
+  const fCat = document.getElementById("filterCategory").value;
+
+  let jobs = STATE.jobs.filter(j=>{
+    if(q){
+      const hay = [j.jobNo,j.vessel,j.instruction,j.client,j.secondaryClient,j.admiraltySuit,j.category,j.instructingParty,j.personInCharge,j.address,j.invoiceType].join(" ").toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    if(fFile && !normStatus(j.fileStatus).includes(fFile.toLowerCase())) return false;
+    if(fInv && !normStatus(j.invoiceStatus).includes(fInv.toLowerCase())) return false;
+    if(fCat && j.category !== fCat) return false;
+    if(statCustomFilter && !statCustomFilter(j)) return false;
+    return true;
+  });
+
+  jobs.sort((a,b)=>{
+    let va = a[sortKey], vb = b[sortKey];
+    if(sortKey==="jobNo"){ va = parseFloat(va)||0; vb = parseFloat(vb)||0; }
+    else if(sortKey==="date"){ va = new Date(va||0).getTime()||0; vb = new Date(vb||0).getTime()||0; }
+    else { va = (va||"").toString().toLowerCase(); vb = (vb||"").toString().toLowerCase(); }
+    if(va<vb) return -1*sortDir;
+    if(va>vb) return 1*sortDir;
+    return 0;
+  });
+  return jobs;
+}
+
+function renderTable(){
+  const jobs = getFilteredJobs();
+  document.getElementById("resultCount").textContent = `${jobs.length} job(s)`;
+  const totalPages = Math.max(1, Math.ceil(jobs.length / pageSize));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage-1)*pageSize;
+  const pageJobs = jobs.slice(start, start+pageSize);
+
+  const tbody = document.getElementById("tableBody");
+  const emptyState = document.getElementById("emptyState");
+  if(!pageJobs.length){
+    tbody.innerHTML = "";
+    emptyState.style.display = "block";
+  } else {
+    emptyState.style.display = "none";
+    tbody.innerHTML = pageJobs.map(j=>`
+      <tr data-id="${j.id}">
+        <td data-label="Job No">${escapeHtml(j.jobNo)}</td>
+        <td data-label="Date">${escapeHtml(formatDateDMY(j.date))}</td>
+        <td class="vessel-cell" data-label="Vessel / Subject">${escapeHtml(j.vessel)}</td>
+        <td class="instr-cell" data-label="Instruction">${escapeHtml((j.instruction||"").slice(0,90))}${(j.instruction||"").length>90?"…":""}</td>
+        <td data-label="Category"><span class="pill pill-muted">${escapeHtml(j.category||DEFAULT_CATEGORY)}</span></td>
+        <td data-label="Principal Client">${escapeHtml(j.client)}</td>
+        <td data-label="Secondary Client">${escapeHtml(j.secondaryClient)}</td>
+        <td data-label="Admiralty Suit">${escapeHtml(j.admiraltySuit)}</td>
+        <td data-label="Security">${securityTypePill(j.securityType)}${securityExpiryBadgeHtml(j)}</td>
+        <td data-label="File Status">${fileStatusPill(j.fileStatus)}</td>
+        <td data-label="Invoice">${j.invoiceType?`<span class="pill pill-muted" style="margin-right:4px;">${escapeHtml(j.invoiceType)}</span>`:""}${invoiceStatusPill(j.invoiceStatus)}</td>
+        <td data-label="Actions" onclick="event.stopPropagation();" style="${isLoggedIn() ? '' : 'display:none;'}">
+          <button type="button" class="btn btn-small row-edit-btn" data-id="${j.id}">Edit</button>
+          <button type="button" class="btn btn-small btn-danger row-delete-btn" data-id="${j.id}">Delete</button>
+        </td>
+      </tr>
+    `).join("");
+  }
+  document.getElementById("pageInfo").textContent = `Page ${currentPage} of ${totalPages}`;
+  tbody.querySelectorAll("tr").forEach(tr=>{
+    tr.addEventListener("click", ()=> openViewModal(tr.dataset.id));
+  });
+  tbody.querySelectorAll(".row-edit-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(!requireLogin()) return;
+      const job = STATE.jobs.find(j=>j.id===btn.dataset.id);
+      if(job) openEditModal(job);
+    });
+  });
+  tbody.querySelectorAll(".row-delete-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      if(!requireLogin()) return;
+      if(!confirm("Delete this job? This cannot be undone.")) return;
+      const job = STATE.jobs.find(j=>j.id===btn.dataset.id);
+      STATE.jobs = STATE.jobs.filter(j=>j.id!==btn.dataset.id);
+      logActivity("Deleted", job);
+      if(cloudEnabled()) apiPost("deleteJob", { id: btn.dataset.id });
+      saveState();
+      refreshAll();
+      showToast("Job deleted");
+    });
+  });
+}
+
+function renderActivity(){
+  const box = document.getElementById("activityBox");
+  if(!STATE.activityLog.length){
+    box.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">No edits yet — changes will be logged here with who made them.</div>`;
+    return;
+  }
+  box.innerHTML = STATE.activityLog.slice(0,10).map(a=>{
+    const d = new Date(a.ts);
+    const when = isNaN(d.getTime()) ? "" : d.toLocaleString();
+    return `<div><span class="v"><b>${escapeHtml(a.user)}</b> ${escapeHtml(a.action)} job ${escapeHtml(a.jobNo||"")} ${a.vessel?("("+escapeHtml(a.vessel)+")"):""} <span style="color:var(--text-dim);">— ${escapeHtml(when)}</span></span></div>`;
+  }).join("");
+}
+
+function renderUserBadge(){
+  const badge = document.getElementById("userBadge");
+  const btnLogin = document.getElementById("btnLogin");
+  const btnManage = document.getElementById("btnManageUsers");
+  const btnManageCats = document.getElementById("btnManageCategories");
+  const btnNew = document.getElementById("btnNew");
+  const btnImport = document.getElementById("btnImport");
+  const actionsCol = document.getElementById("actionsColHeader");
+  const user = getCurrentUser();
+  if(user){
+    badge.innerHTML = `Logged in as <b>${escapeHtml(user)}</b>`;
+    btnLogin.textContent = "Logout";
+    btnManage.style.display = "inline-block";
+    btnManageCats.style.display = "inline-block";
+    btnNew.style.display = "inline-block";
+    btnImport.style.display = "inline-block";
+    actionsCol.style.display = "";
+  } else {
+    badge.innerHTML = "";
+    btnLogin.textContent = "🔒 Login";
+    btnManage.style.display = "none";
+    btnManageCats.style.display = "none";
+    btnNew.style.display = "none";
+    btnImport.style.display = "none";
+    actionsCol.style.display = "none";
+  }
+}
+
+function refreshAll(){
+  renderStats();
+  renderAlerts();
+  renderActivity();
+  renderUserBadge();
+  renderTable();
+}
+
+/* ================= FORM / MODAL LOGIC ================= */
+const modalOverlay = document.getElementById("modalOverlay");
+const viewOverlay = document.getElementById("viewOverlay");
+const loginOverlay = document.getElementById("loginOverlay");
+const usersOverlay = document.getElementById("usersOverlay");
+let editingId = null;
+
+function populateLoginSelect(){
+  const sel = document.getElementById("loginUserSelect");
+  sel.innerHTML = STATE.users.map(u=>`<option value="${escapeHtml(u.name)}">${escapeHtml(u.name)}</option>`).join("") || `<option value="">No users yet — add one in Manage Access</option>`;
+}
+function openLoginModal(){
+  populateLoginSelect();
+  document.getElementById("loginPin").value = "";
+  loginOverlay.classList.add("open");
+}
+document.getElementById("btnLogin").addEventListener("click", ()=>{
+  if(isLoggedIn()){
+    clearCurrentUser();
+    refreshAll();
+    toggleRelatedAddForms();
+    if(currentRelJobNo){ renderDocsList(); renderDispatchList(); renderReceiveList(); }
+    showToast("Logged out");
+  } else {
+    openLoginModal();
+  }
+});
+document.getElementById("loginCloseBtn").addEventListener("click", ()=>loginOverlay.classList.remove("open"));
+loginOverlay.addEventListener("click", (e)=>{ if(e.target===loginOverlay) loginOverlay.classList.remove("open"); });
+document.getElementById("loginSubmitBtn").addEventListener("click", ()=>{
+  const name = document.getElementById("loginUserSelect").value;
+  const pin = document.getElementById("loginPin").value.trim();
+  const user = STATE.users.find(u=>u.name===name);
+  if(!user){ showToast("No user selected"); return; }
+  if(user.pin !== pin){ showToast("Incorrect PIN"); return; }
+  setCurrentUser(user.name);
+  loginOverlay.classList.remove("open");
+  refreshAll();
+  toggleRelatedAddForms();
+  if(currentRelJobNo){ renderDocsList(); renderDispatchList(); renderReceiveList(); }
+  showToast("Welcome, " + user.name);
+});
+
+function renderUsersList(){
+  const box = document.getElementById("usersList");
+  if(!STATE.users.length){
+    box.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">No users yet.</div>`;
+    return;
+  }
+  box.innerHTML = STATE.users.map((u,idx)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--glass-border);">
+      <span>${escapeHtml(u.name)} <span style="color:var(--text-dim);font-size:11.5px;">PIN: ${"•".repeat(u.pin.length)}</span></span>
+      <button type="button" class="btn btn-small btn-danger remove-user-btn" data-idx="${idx}">Remove</button>
+    </div>
+  `).join("");
+  box.querySelectorAll(".remove-user-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = parseInt(btn.dataset.idx, 10);
+      const removed = STATE.users[idx];
+      if(getCurrentUser() === removed.name) clearCurrentUser();
+      STATE.users.splice(idx,1);
+      if(cloudEnabled()) apiPost("deleteUser", { name: removed.name });
+      saveState();
+      renderUsersList();
+      refreshAll();
+      showToast("Removed " + removed.name);
+    });
+  });
+}
+document.getElementById("btnManageUsers").addEventListener("click", ()=>{
+  renderUsersList();
+  usersOverlay.classList.add("open");
+});
+document.getElementById("usersCloseBtn").addEventListener("click", ()=>usersOverlay.classList.remove("open"));
+usersOverlay.addEventListener("click", (e)=>{ if(e.target===usersOverlay) usersOverlay.classList.remove("open"); });
+document.getElementById("addUserBtn").addEventListener("click", ()=>{
+  const name = document.getElementById("newUserName").value.trim();
+  const pin = document.getElementById("newUserPin").value.trim();
+  if(!name || !pin){ showToast("Enter a name and PIN"); return; }
+  if(STATE.users.some(u=>u.name.toLowerCase()===name.toLowerCase())){ showToast("That name already exists"); return; }
+  STATE.users.push({ name, pin });
+  if(cloudEnabled()) apiPost("addUser", { name, pin });
+  saveState();
+  document.getElementById("newUserName").value = "";
+  document.getElementById("newUserPin").value = "";
+  renderUsersList();
+  showToast("Added " + name);
+});
+
+const categoriesOverlay = document.getElementById("categoriesOverlay");
+
+function refreshCategoryDependents(){
+  applyCategoriesFromState();
+  populateCategorySelect();
+  populateCategoryFilter();
+  renderTable();
+  renderStats();
+}
+
+function renderCategoriesList(){
+  const box = document.getElementById("categoriesList");
+  if(!STATE.categories.length){
+    box.innerHTML = `<div style="color:var(--text-dim);font-size:13px;">No categories yet.</div>`;
+    return;
+  }
+  box.innerHTML = STATE.categories.map((c,idx)=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--glass-border);">
+      <span style="display:flex;align-items:center;gap:8px;flex:1;">
+        <span style="width:12px;height:12px;background:${escapeHtml(c.color||'#9aa5b8')};display:inline-block;flex-shrink:0;"></span>
+        <input type="text" class="cat-rename-input" data-idx="${idx}" value="${escapeHtml(c.name)}" style="flex:1;font-family:inherit;border:1px solid var(--glass-border);padding:6px 8px;font-size:12.5px;">
+      </span>
+      <button type="button" class="btn btn-small cat-save-btn" data-idx="${idx}">Save</button>
+      <button type="button" class="btn btn-small btn-danger cat-remove-btn" data-idx="${idx}">Remove</button>
+    </div>
+  `).join("");
+  box.querySelectorAll(".cat-save-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = parseInt(btn.dataset.idx, 10);
+      const input = box.querySelector(`.cat-rename-input[data-idx="${idx}"]`);
+      const newName = input.value.trim();
+      const oldName = STATE.categories[idx].name;
+      if(!newName){ showToast("Category name can't be empty"); return; }
+      if(newName === oldName){ showToast("No change"); return; }
+      if(STATE.categories.some((c,i)=>i!==idx && c.name.toLowerCase()===newName.toLowerCase())){ showToast("That category already exists"); return; }
+      STATE.categories[idx].name = newName;
+      STATE.jobs.forEach(j=>{ if(j.category===oldName) j.category = newName; });
+      saveState();
+      if(cloudEnabled()) apiPost("renameCategory", { oldName, newName });
+      refreshCategoryDependents();
+      renderCategoriesList();
+      showToast(`Renamed "${oldName}" to "${newName}"`);
+    });
+  });
+  box.querySelectorAll(".cat-remove-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      const idx = parseInt(btn.dataset.idx, 10);
+      const cat = STATE.categories[idx];
+      if(STATE.categories.length <= 1){ showToast("Keep at least one category"); return; }
+      const inUse = STATE.jobs.filter(j=>j.category===cat.name).length;
+      if(inUse > 0 && !confirm(`${inUse} job(s) currently use "${cat.name}". Remove it anyway? Those jobs will be recategorized as "${STATE.categories.find((c,i)=>i!==idx)?.name}".`)) return;
+      const fallback = STATE.categories.find((c,i)=>i!==idx)?.name || DEFAULT_CATEGORY;
+      STATE.jobs.forEach(j=>{ if(j.category===cat.name) j.category = fallback; });
+      STATE.categories.splice(idx,1);
+      saveState();
+      if(cloudEnabled()) apiPost("deleteCategory", { name: cat.name });
+      refreshCategoryDependents();
+      renderCategoriesList();
+      showToast(`Removed "${cat.name}"`);
+    });
+  });
+}
+
+document.getElementById("btnManageCategories").addEventListener("click", ()=>{
+  renderCategoriesList();
+  categoriesOverlay.classList.add("open");
+});
+document.getElementById("categoriesCloseBtn").addEventListener("click", ()=>categoriesOverlay.classList.remove("open"));
+categoriesOverlay.addEventListener("click", (e)=>{ if(e.target===categoriesOverlay) categoriesOverlay.classList.remove("open"); });
+document.getElementById("addCategoryBtn").addEventListener("click", ()=>{
+  const name = document.getElementById("newCategoryName").value.trim();
+  if(!name){ showToast("Enter a category name"); return; }
+  if(STATE.categories.some(c=>c.name.toLowerCase()===name.toLowerCase())){ showToast("That category already exists"); return; }
+  const color = nextCategoryColor();
+  STATE.categories.push({ name, color });
+  saveState();
+  if(cloudEnabled()) apiPost("addCategory", { name, color });
+  document.getElementById("newCategoryName").value = "";
+  refreshCategoryDependents();
+  renderCategoriesList();
+  showToast("Added category: " + name);
+});
+
+function populateCategorySelect(){
+  const sel = document.getElementById("f_category");
+  sel.innerHTML = ALL_CATEGORIES.map(c=>`<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join("");
+}
+
+function openNewModal(){
+  editingId = null;
+  document.getElementById("modalTitle").textContent = "New Job";
+  document.getElementById("jobForm").reset();
+  document.getElementById("btnDelete").style.display = "none";
+  document.getElementById("aiCategoryBox").classList.remove("show");
+  document.getElementById("aiSimilarBox").classList.remove("show");
+  populateCategorySelect();
+  modalOverlay.classList.add("open");
+  updateRelJobNo("");
+  document.getElementById("f_vessel").focus();
+  showFormStep(1);
+}
+
+function openEditModal(job){
+  editingId = job.id;
+  document.getElementById("modalTitle").textContent = "Edit Job #" + job.jobNo;
+  populateCategorySelect();
+  document.getElementById("f_jobNo").value = job.jobNo || "";
+  document.getElementById("f_date").value = job.date || "";
+  document.getElementById("f_vessel").value = job.vessel || "";
+  document.getElementById("f_instruction").value = job.instruction || "";
+  document.getElementById("f_category").value = job.category || DEFAULT_CATEGORY;
+  document.getElementById("f_client").value = job.client || "";
+  document.getElementById("f_secondaryClient").value = job.secondaryClient || "";
+  document.getElementById("f_admiraltySuit").value = job.admiraltySuit || "";
+  document.getElementById("f_fileStatus").value = (job.fileStatus||"").toUpperCase().includes("RUNNING") ? "RUNNING" : ((job.fileStatus||"").toUpperCase().includes("CLOSED") ? "CLOSED" : "");
+  document.getElementById("f_invoiceType").value = job.invoiceType || "";
+  document.getElementById("f_invoiceStatus").value = job.invoiceStatus || "";
+  document.getElementById("f_invoiceAmount").value = job.invoiceAmount || "";
+  document.getElementById("f_securityType").value = job.securityType || "";
+  document.getElementById("f_bgAmount").value = job.bgAmount || "";
+  document.getElementById("f_securityExpiryDate").value = job.securityExpiryDate || "";
+  document.getElementById("f_instructingParty").value = job.instructingParty || "";
+  document.getElementById("f_personInCharge").value = job.personInCharge || "";
+  document.getElementById("f_address").value = job.address || "";
+  document.getElementById("btnDelete").style.display = "inline-block";
+  document.getElementById("aiCategoryBox").classList.remove("show");
+  document.getElementById("aiSimilarBox").classList.remove("show");
+  modalOverlay.classList.add("open");
+  updateRelJobNo(job.jobNo || "");
+  showFormStep(1);
+}
+
+function closeModal(){ modalOverlay.classList.remove("open"); editingId = null; }
+
+/* ---- Mobile step-by-step navigation for the job form (desktop shows everything at once) ---- */
+const JOB_FORM_STEPS = 6;
+let currentFormStep = 1;
+function showFormStep(n){
+  currentFormStep = Math.max(1, Math.min(JOB_FORM_STEPS, n));
+  const form = document.getElementById("jobForm");
+  form.querySelectorAll(".form-step").forEach(el=>{
+    el.classList.toggle("active", parseInt(el.dataset.step,10) === currentFormStep);
+  });
+  form.classList.toggle("step-final", currentFormStep === JOB_FORM_STEPS);
+  const dots = document.getElementById("jobFormStepDots");
+  if(dots){
+    dots.innerHTML = Array.from({length:JOB_FORM_STEPS},(_,i)=>`<span class="step-dot${i+1===currentFormStep?" active":""}"></span>`).join("");
+  }
+  const label = document.getElementById("stepLabel");
+  if(label) label.textContent = `Step ${currentFormStep} of ${JOB_FORM_STEPS}`;
+  const prevBtn = document.getElementById("stepPrevBtn");
+  const nextBtn = document.getElementById("stepNextBtn");
+  if(prevBtn) prevBtn.style.visibility = currentFormStep===1 ? "hidden" : "visible";
+  if(nextBtn) nextBtn.style.visibility = currentFormStep===JOB_FORM_STEPS ? "hidden" : "visible";
+  const modalEl = document.querySelector("#modalOverlay .modal");
+  if(modalEl) modalEl.scrollTop = 0;
+}
+document.getElementById("stepPrevBtn").addEventListener("click", ()=>showFormStep(currentFormStep-1));
+document.getElementById("stepNextBtn").addEventListener("click", ()=>showFormStep(currentFormStep+1));
+
+document.getElementById("btnNew").addEventListener("click", ()=>{
+  if(!requireLogin()) return;
+  openNewModal();
+});
+document.getElementById("modalCloseBtn").addEventListener("click", closeModal);
+document.getElementById("btnCancel").addEventListener("click", closeModal);
+modalOverlay.addEventListener("click", (e)=>{ if(e.target===modalOverlay) closeModal(); });
+
+/* Live AI suggestions while typing instruction */
+let aiDebounce;
+document.getElementById("f_instruction").addEventListener("input", (e)=>{
+  clearTimeout(aiDebounce);
+  aiDebounce = setTimeout(()=>{
+    const text = e.target.value;
+    const cats = suggestCategories(text);
+    const catBox = document.getElementById("aiCategoryBox");
+    const chips = document.getElementById("aiCategoryChips");
+    if(cats.length){
+      chips.innerHTML = cats.map(c=>`<span class="ai-chip" data-cat="${escapeHtml(c)}">${escapeHtml(c)}</span>`).join("");
+      catBox.classList.add("show");
+      chips.querySelectorAll(".ai-chip").forEach(chip=>{
+        chip.addEventListener("click", ()=>{ document.getElementById("f_category").value = chip.dataset.cat; showToast("Category set: " + chip.dataset.cat); });
+      });
+    } else {
+      catBox.classList.remove("show");
+    }
+
+    const sims = findSimilarJobs(text, document.getElementById("f_jobNo").value);
+    const simBox = document.getElementById("aiSimilarBox");
+    const simList = document.getElementById("aiSimilarList");
+    if(sims.length){
+      simList.innerHTML = sims.map(s=>`<div class="similar-item"><b>${escapeHtml(s.job.vessel||s.job.jobNo)}</b> (Job #${escapeHtml(s.job.jobNo)}, ${escapeHtml(formatDateDMY(s.job.date)||"n/a")}) — ${escapeHtml((s.job.instruction||"").slice(0,80))} · client: ${escapeHtml(s.job.client||"—")}</div>`).join("");
+      simBox.classList.add("show");
+    } else {
+      simBox.classList.remove("show");
+    }
+
+    if(!document.getElementById("f_category").dataset.touched && cats.length){
+      // don't force override if user already picked one manually this session
+    }
+  }, 250);
+});
+document.getElementById("f_category").addEventListener("change", (e)=>{ e.target.dataset.touched = "1"; });
+
+document.getElementById("jobForm").addEventListener("submit", (e)=>{
+  e.preventDefault();
+  if(!requireLogin()){ return; }
+  const jobNo = document.getElementById("f_jobNo").value.trim();
+  const instruction = document.getElementById("f_instruction").value.trim();
+  const category = document.getElementById("f_category").value || autoCategory(instruction);
+  const job = {
+    id: editingId || ("local-" + Date.now() + "-" + Math.random().toString(36).slice(2,7)),
+    jobNo,
+    date: document.getElementById("f_date").value.trim(),
+    vessel: document.getElementById("f_vessel").value.trim(),
+    instruction,
+    category,
+    client: document.getElementById("f_client").value.trim(),
+    secondaryClient: document.getElementById("f_secondaryClient").value.trim(),
+    admiraltySuit: document.getElementById("f_admiraltySuit").value.trim(),
+    fileStatus: document.getElementById("f_fileStatus").value,
+    invoiceType: document.getElementById("f_invoiceType").value,
+    invoiceStatus: document.getElementById("f_invoiceStatus").value,
+    invoiceAmount: document.getElementById("f_invoiceAmount").value.trim(),
+    securityType: document.getElementById("f_securityType").value,
+    bgAmount: document.getElementById("f_bgAmount").value.trim(),
+    securityExpiryDate: document.getElementById("f_securityExpiryDate").value.trim(),
+    instructingParty: document.getElementById("f_instructingParty").value.trim(),
+    personInCharge: document.getElementById("f_personInCharge").value.trim(),
+    address: document.getElementById("f_address").value.trim(),
+  };
+  if(editingId){
+    const idx = STATE.jobs.findIndex(j=>j.id===editingId);
+    if(idx>-1) STATE.jobs[idx] = job;
+    logActivity("Edited", job);
+    if(cloudEnabled()) apiPost("updateJob", job);
+    showToast("Job #" + jobNo + " updated");
+  } else {
+    STATE.jobs.unshift(job);
+    logActivity("Added", job);
+    if(cloudEnabled()) apiPost("addJob", job);
+    showToast("Job #" + jobNo + " added");
+  }
+  saveState();
+  closeModal();
+  refreshAll();
+});
+
+document.getElementById("btnDelete").addEventListener("click", ()=>{
+  if(!requireLogin()) return;
+  if(!editingId) return;
+  if(!confirm("Delete this job? This cannot be undone.")) return;
+  const job = STATE.jobs.find(j=>j.id===editingId);
+  STATE.jobs = STATE.jobs.filter(j=>j.id!==editingId);
+  logActivity("Deleted", job);
+  if(cloudEnabled()) apiPost("deleteJob", { id: editingId });
+  saveState();
+  closeModal();
+  refreshAll();
+  showToast("Job deleted");
+});
+
+/* ================= VIEW MODAL ================= */
+let currentRelJobNo = "";
+
+function openViewModal(id){
+  const job = STATE.jobs.find(j=>j.id===id);
+  if(!job) return;
+  document.getElementById("viewTitle").textContent = (job.vessel || "Job #" + job.jobNo);
+  document.getElementById("viewSub").textContent = `Job No ${job.jobNo} · ${formatDateDMY(job.date)||"date n/a"} · ${job.category||DEFAULT_CATEGORY}`;
+  const rows = [
+    ["Instruction / Description", job.instruction || "—", true],
+    ["Principal Client", job.client || "—"],
+    ["Secondary Client", job.secondaryClient || "—"],
+    ["Admiralty Suit No", job.admiraltySuit || "—"],
+    ["File Status", (job.fileStatus||"—")],
+    ["Invoice Type", job.invoiceType || "—"],
+    ["Invoice Status", (job.invoiceStatus||"—")],
+    ["Invoice Amount", job.invoiceAmount || "—"],
+    ["Security", job.securityType || "—"],
+    ["LoU / BG Amount", job.bgAmount || "—"],
+    ["Security Expiry", securityExpiryLabel(job)],
+    ["Instructing Party", job.instructingParty || "—"],
+    ["Person In Charge", job.personInCharge || "—"],
+    ["Address", job.address || "—", true],
+  ];
+  document.getElementById("viewGrid").innerHTML = rows.map(([k,v,full])=>`
+    <div class="${full?'full':''}"><div class="k">${escapeHtml(k)}</div><div class="v">${escapeHtml(v)}</div></div>
+  `).join("");
+
+  const sims = findSimilarJobs(job.instruction, job.jobNo);
+  if(sims.length){
+    document.getElementById("viewGrid").innerHTML += `
+      <div class="full"><div class="k">AI: Similar Past Jobs</div><div class="v">
+      ${sims.map(s=>`<div class="similar-item"><b>${escapeHtml(s.job.vessel||s.job.jobNo)}</b> (Job #${escapeHtml(s.job.jobNo)}) — ${escapeHtml((s.job.instruction||"").slice(0,80))}</div>`).join("")}
+      </div></div>`;
+  }
+
+  renderViewOnlyRelated(job.jobNo);
+
+  document.getElementById("viewEditBtn").style.display = isLoggedIn() ? "inline-block" : "none";
+  document.getElementById("viewEditBtn").onclick = ()=>{
+    if(!requireLogin()) return;
+    viewOverlay.classList.remove("open"); openEditModal(job);
+  };
+  viewOverlay.classList.add("open");
+}
+
+/* ================= RELATED RECORDS: Documents / Dispatch / Receive ================= */
+function renderViewOnlyRelated(jobNo){
+  const docs = STATE.documents.filter(d=>d.jobNo===jobNo);
+  const disp = STATE.dispatch.filter(d=>d.jobNo===jobNo);
+  const recv = STATE.receive.filter(d=>d.jobNo===jobNo);
+  const box = document.getElementById("viewRelated");
+
+  if(!docs.length && !disp.length && !recv.length){
+    box.innerHTML = `<div class="rel-section"><div class="rel-empty">No documents, dispatch, or receive entries recorded for this job yet.</div></div>`;
+    return;
+  }
+
+  let html = "";
+
+  if(docs.length){
+    html += `<div class="rel-section"><h4>📄 Documents <span class="tag-mini">Invoice / BG / POA / Other</span></h4>`;
+    html += docs.map(d=>`
+      <div class="rel-item">
+        <div class="rel-main">
+          <b>${escapeHtml(d.docType)}</b>${d.status?`<span class="pill ${d.status==='Issued'||d.status==='Received'?'pill-ok':(d.status==='Expired'?'pill-danger':'pill-warn')}">${escapeHtml(d.status)}</span>`:""}<br>
+          ${escapeHtml(d.description||"")} ${d.amount?(" · Amount: "+escapeHtml(d.amount)):""} ${d.expiryDate?(" · Expiry: "+escapeHtml(d.expiryDate)):""}
+          ${d.fileLink?`<br><a href="${escapeHtml(d.fileLink)}" target="_blank" rel="noopener">📎 Open file</a>`:""}
+          ${d.remarks?`<br><span style="color:var(--text-dim);">${escapeHtml(d.remarks)}</span>`:""}
+        </div>
+      </div>`).join("");
+    html += `</div>`;
+  }
+
+  if(disp.length){
+    html += `<div class="rel-section"><h4>📤 Dispatch Register <span class="tag-mini">Outgoing letters/emails</span></h4>`;
+    html += disp.map(d=>`
+      <div class="rel-item">
+        <div class="rel-main">
+          <b>${escapeHtml(d.date||"")}</b> to <b>${escapeHtml(d.to||"")}</b> — ${escapeHtml(d.subject||"")}<br>
+          Mode: ${escapeHtml(d.mode||"—")} ${d.replyExpected?(" · Reply expected: "+escapeHtml(d.replyExpected)):""} ${d.replyReceived?(" · Reply received: "+escapeHtml(d.replyReceived)):""}
+          ${d.fileLink?`<br><a href="${escapeHtml(d.fileLink)}" target="_blank" rel="noopener">📎 Open file</a>`:""}
+        </div>
+      </div>`).join("");
+    html += `</div>`;
+  }
+
+  if(recv.length){
+    html += `<div class="rel-section"><h4>📥 Receive Register <span class="tag-mini">Incoming letters/emails</span></h4>`;
+    html += recv.map(d=>`
+      <div class="rel-item">
+        <div class="rel-main">
+          <b>${escapeHtml(d.date||"")}</b> from <b>${escapeHtml(d.from||"")}</b> — ${escapeHtml(d.subject||"")}<br>
+          ${d.actionRequired?("Action: "+escapeHtml(d.actionRequired)):""} ${d.repliedOn?(" · Replied on: "+escapeHtml(d.repliedOn)):""}
+          ${d.fileLink?`<br><a href="${escapeHtml(d.fileLink)}" target="_blank" rel="noopener">📎 Open file</a>`:""}
+        </div>
+      </div>`).join("");
+    html += `</div>`;
+  }
+
+  box.innerHTML = html;
+}
+
+function toggleRelatedAddForms(){
+  const show = isLoggedIn() ? "grid" : "none";
+  document.getElementById("docsAddForm").style.display = show;
+  document.getElementById("dispatchAddForm").style.display = show;
+  document.getElementById("receiveAddForm").style.display = show;
+}
+
+function updateRelJobNo(jobNo){
+  currentRelJobNo = (jobNo || "").trim();
+  editingDocId = null; editingDispatchId = null; editingReceiveId = null;
+  const btnDoc = document.getElementById("btnAddDoc"); if(btnDoc) btnDoc.textContent = "+ Add Document";
+  const btnDisp = document.getElementById("btnAddDispatch"); if(btnDisp) btnDisp.textContent = "+ Add Dispatch";
+  const btnRecv = document.getElementById("btnAddReceive"); if(btnRecv) btnRecv.textContent = "+ Add Receive Entry";
+  const hint = document.getElementById("relJobNoHint");
+  const hasJobNo = !!currentRelJobNo;
+  hint.style.display = hasJobNo ? "none" : "block";
+  document.getElementById("docsAddForm").style.opacity = hasJobNo ? "1" : "0.4";
+  document.getElementById("dispatchAddForm").style.opacity = hasJobNo ? "1" : "0.4";
+  document.getElementById("receiveAddForm").style.opacity = hasJobNo ? "1" : "0.4";
+  renderDocsList();
+  renderDispatchList();
+  renderReceiveList();
+  toggleRelatedAddForms();
+}
+document.getElementById("f_jobNo").addEventListener("input", (e)=>{ updateRelJobNo(e.target.value); });
+
+let editingDocId = null, editingDispatchId = null, editingReceiveId = null;
+
+function relActionBtns(deleteAction, editType, id){
+  if(!isLoggedIn()) return "";
+  return `<button type="button" class="btn rel-edit-btn" data-type="${editType}" data-id="${id}">Edit</button>
+    <button type="button" class="btn btn-danger rel-del-btn" data-action="${deleteAction}" data-id="${id}">Delete</button>`;
+}
+function relDeleteBtn(action, id, label){
+  return isLoggedIn() ? `<button type="button" class="btn btn-danger rel-del-btn" data-action="${action}" data-id="${id}">Delete</button>` : "";
+}
+
+function renderDocsList(){
+  const list = STATE.documents.filter(d=>d.jobNo===currentRelJobNo);
+  const box = document.getElementById("docsList");
+  if(!list.length){ box.innerHTML = `<div class="rel-empty">No documents recorded yet for this job.</div>`; return; }
+  box.innerHTML = list.map(d=>`
+    <div class="rel-item">
+      <div class="rel-main">
+        <b>${escapeHtml(d.docType)}</b>${d.status?`<span class="pill ${d.status==='Issued'||d.status==='Received'?'pill-ok':(d.status==='Expired'?'pill-danger':'pill-warn')}">${escapeHtml(d.status)}</span>`:""}<br>
+        ${escapeHtml(d.description||"")} ${d.amount?(" · Amount: "+escapeHtml(d.amount)):""} ${d.expiryDate?(" · Expiry: "+escapeHtml(d.expiryDate)):""}
+        ${d.fileLink?`<br><a href="${escapeHtml(d.fileLink)}" target="_blank" rel="noopener">📎 Open file link</a>`:""}
+        ${d.remarks?`<br><span style="color:var(--text-dim);">${escapeHtml(d.remarks)}</span>`:""}
+      </div>
+      <div class="rel-actions">${relActionBtns("deleteDocument", "document", d.id)}</div>
+    </div>
+  `).join("");
+  wireRelDeleteButtons();
+  wireRelEditButtons();
+}
+
+function renderDispatchList(){
+  const list = STATE.dispatch.filter(d=>d.jobNo===currentRelJobNo);
+  const box = document.getElementById("dispatchList");
+  if(!list.length){ box.innerHTML = `<div class="rel-empty">No dispatch entries yet for this job.</div>`; return; }
+  box.innerHTML = list.map(d=>`
+    <div class="rel-item">
+      <div class="rel-main">
+        <b>${escapeHtml(d.date||"")}</b> to <b>${escapeHtml(d.to||"")}</b> — ${escapeHtml(d.subject||"")}<br>
+        Mode: ${escapeHtml(d.mode||"—")} ${d.replyExpected?(" · Reply expected: "+escapeHtml(d.replyExpected)):""} ${d.replyReceived?(" · Reply received: "+escapeHtml(d.replyReceived)):""}
+        ${d.fileLink?`<br><a href="${escapeHtml(d.fileLink)}" target="_blank" rel="noopener">📎 Open file link</a>`:""}
+      </div>
+      <div class="rel-actions">${relActionBtns("deleteDispatch", "dispatch", d.id)}</div>
+    </div>
+  `).join("");
+  wireRelDeleteButtons();
+  wireRelEditButtons();
+}
+
+function renderReceiveList(){
+  const list = STATE.receive.filter(d=>d.jobNo===currentRelJobNo);
+  const box = document.getElementById("receiveList");
+  if(!list.length){ box.innerHTML = `<div class="rel-empty">No receive entries yet for this job.</div>`; return; }
+  box.innerHTML = list.map(d=>`
+    <div class="rel-item">
+      <div class="rel-main">
+        <b>${escapeHtml(d.date||"")}</b> from <b>${escapeHtml(d.from||"")}</b> — ${escapeHtml(d.subject||"")}<br>
+        ${d.actionRequired?("Action: "+escapeHtml(d.actionRequired)):""} ${d.repliedOn?(" · Replied on: "+escapeHtml(d.repliedOn)):""}
+        ${d.fileLink?`<br><a href="${escapeHtml(d.fileLink)}" target="_blank" rel="noopener">📎 Open file link</a>`:""}
+      </div>
+      <div class="rel-actions">${relActionBtns("deleteReceive", "receive", d.id)}</div>
+    </div>
+  `).join("");
+  wireRelDeleteButtons();
+  wireRelEditButtons();
+}
+
+function wireRelDeleteButtons(){
+  document.querySelectorAll(".rel-del-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+      if(!requireLogin()) return;
+      if(!confirm("Delete this entry?")) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if(action==="deleteDocument"){ STATE.documents = STATE.documents.filter(d=>d.id!==id); renderDocsList(); }
+      if(action==="deleteDispatch"){ STATE.dispatch = STATE.dispatch.filter(d=>d.id!==id); renderDispatchList(); }
+      if(action==="deleteReceive"){ STATE.receive = STATE.receive.filter(d=>d.id!==id); renderReceiveList(); }
+      saveState();
+      if(cloudEnabled()) apiPost(action, { id });
+      showToast("Deleted");
+    };
+  });
+}
+
+function wireRelEditButtons(){
+  document.querySelectorAll(".rel-edit-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+      if(!requireLogin()) return;
+      const type = btn.dataset.type;
+      const id = btn.dataset.id;
+      if(type==="document") startEditDoc(STATE.documents.find(d=>d.id===id));
+      if(type==="dispatch") startEditDispatch(STATE.dispatch.find(d=>d.id===id));
+      if(type==="receive") startEditReceive(STATE.receive.find(d=>d.id===id));
+    };
+  });
+}
+
+function startEditDoc(rec){
+  if(!rec) return;
+  editingDocId = rec.id;
+  document.getElementById("doc_type").value = rec.docType || "Invoice";
+  document.getElementById("doc_description").value = rec.description || "";
+  document.getElementById("doc_status").value = rec.status || "Pending";
+  document.getElementById("doc_amount").value = rec.amount || "";
+  document.getElementById("doc_expiry").value = rec.expiryDate || "";
+  document.getElementById("doc_filelink").value = rec.fileLink || "";
+  document.getElementById("doc_remarks").value = rec.remarks || "";
+  document.getElementById("btnAddDoc").textContent = "Update Document";
+  document.getElementById("docsAddForm").scrollIntoView({ behavior:"smooth", block:"center" });
+}
+function startEditDispatch(rec){
+  if(!rec) return;
+  editingDispatchId = rec.id;
+  document.getElementById("disp_date").value = rec.date || "";
+  document.getElementById("disp_to").value = rec.to || "";
+  document.getElementById("disp_subject").value = rec.subject || "";
+  document.getElementById("disp_mode").value = rec.mode || "Email";
+  document.getElementById("disp_filelink").value = rec.fileLink || "";
+  document.getElementById("disp_replyExpected").value = rec.replyExpected || "";
+  document.getElementById("disp_replyReceived").value = rec.replyReceived || "";
+  document.getElementById("btnAddDispatch").textContent = "Update Dispatch";
+  document.getElementById("dispatchAddForm").scrollIntoView({ behavior:"smooth", block:"center" });
+}
+function startEditReceive(rec){
+  if(!rec) return;
+  editingReceiveId = rec.id;
+  document.getElementById("rec_date").value = rec.date || "";
+  document.getElementById("rec_from").value = rec.from || "";
+  document.getElementById("rec_subject").value = rec.subject || "";
+  document.getElementById("rec_action").value = rec.actionRequired || "";
+  document.getElementById("rec_repliedOn").value = rec.repliedOn || "";
+  document.getElementById("rec_filelink").value = rec.fileLink || "";
+  document.getElementById("btnAddReceive").textContent = "Update Receive Entry";
+  document.getElementById("receiveAddForm").scrollIntoView({ behavior:"smooth", block:"center" });
+}
+
+function newRelId(prefix){ return prefix + "-" + Date.now() + "-" + Math.random().toString(36).slice(2,7); }
+
+/* ---- File upload helper (uploads to Google Drive via Apps Script) ---- */
+function setupFileUpload(fileInputId, linkInputId){
+  const fileInput = document.getElementById(fileInputId);
+  fileInput.addEventListener("change", async ()=>{
+    const file = fileInput.files[0];
+    if(!file) return;
+    if(!cloudEnabled()){
+      showToast("Cloud not connected — paste a file link manually instead");
+      fileInput.value = "";
+      return;
+    }
+    if(file.size > 8 * 1024 * 1024){
+      showToast("File too large (max ~8MB) — try a smaller file or paste a link instead");
+      fileInput.value = "";
+      return;
+    }
+    showToast("Uploading " + file.name + "…");
+    try{
+      const base64 = await fileToBase64(file);
+      const res = await apiPost("uploadFile", {
+        filename: file.name,
+        mimeType: file.type || "application/octet-stream",
+        base64,
+        jobNo: currentRelJobNo,
+      });
+      if(res && res.ok){
+        document.getElementById(linkInputId).value = res.url;
+        showToast("Uploaded: " + file.name);
+      } else {
+        showToast((res && res.error) ? res.error : "Upload failed");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("Upload failed");
+    }
+    fileInput.value = "";
+  });
+}
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=> resolve(reader.result.split(",")[1]);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+setupFileUpload("doc_file", "doc_filelink");
+setupFileUpload("disp_file", "disp_filelink");
+setupFileUpload("rec_file", "rec_filelink");
+
+document.getElementById("btnAddDoc").addEventListener("click", ()=>{
+  if(!requireLogin()) return;
+  if(!currentRelJobNo){ showToast("Enter Job No first"); return; }
+  const doc = {
+    id: editingDocId || newRelId("doc"),
+    jobNo: currentRelJobNo,
+    docType: document.getElementById("doc_type").value,
+    description: document.getElementById("doc_description").value.trim(),
+    status: document.getElementById("doc_status").value,
+    amount: document.getElementById("doc_amount").value.trim(),
+    expiryDate: document.getElementById("doc_expiry").value.trim(),
+    fileLink: document.getElementById("doc_filelink").value.trim(),
+    remarks: document.getElementById("doc_remarks").value.trim(),
+  };
+  if(editingDocId){
+    const idx = STATE.documents.findIndex(d=>d.id===editingDocId);
+    if(idx>-1) STATE.documents[idx] = doc;
+    if(cloudEnabled()) apiPost("updateDocument", doc);
+    showToast("Document updated");
+    editingDocId = null;
+    document.getElementById("btnAddDoc").textContent = "+ Add Document";
+  } else {
+    STATE.documents.push(doc);
+    if(cloudEnabled()) apiPost("addDocument", doc);
+    showToast("Document added");
+  }
+  saveState();
+  renderDocsList();
+  ["doc_description","doc_amount","doc_expiry","doc_filelink","doc_remarks"].forEach(id=>document.getElementById(id).value="");
+});
+
+document.getElementById("btnAddDispatch").addEventListener("click", ()=>{
+  if(!requireLogin()) return;
+  if(!currentRelJobNo){ showToast("Enter Job No first"); return; }
+  const rec = {
+    id: editingDispatchId || newRelId("disp"),
+    jobNo: currentRelJobNo,
+    date: document.getElementById("disp_date").value.trim(),
+    to: document.getElementById("disp_to").value.trim(),
+    subject: document.getElementById("disp_subject").value.trim(),
+    mode: document.getElementById("disp_mode").value,
+    fileLink: document.getElementById("disp_filelink").value.trim(),
+    replyExpected: document.getElementById("disp_replyExpected").value,
+    replyReceived: document.getElementById("disp_replyReceived").value,
+  };
+  if(editingDispatchId){
+    const idx = STATE.dispatch.findIndex(d=>d.id===editingDispatchId);
+    if(idx>-1) STATE.dispatch[idx] = rec;
+    if(cloudEnabled()) apiPost("updateDispatch", rec);
+    showToast("Dispatch entry updated");
+    editingDispatchId = null;
+    document.getElementById("btnAddDispatch").textContent = "+ Add Dispatch";
+  } else {
+    STATE.dispatch.push(rec);
+    if(cloudEnabled()) apiPost("addDispatch", rec);
+    showToast("Dispatch entry added");
+  }
+  saveState();
+  renderDispatchList();
+  ["disp_date","disp_to","disp_subject","disp_filelink"].forEach(id=>document.getElementById(id).value="");
+});
+
+document.getElementById("btnAddReceive").addEventListener("click", ()=>{
+  if(!requireLogin()) return;
+  if(!currentRelJobNo){ showToast("Enter Job No first"); return; }
+  const rec = {
+    id: editingReceiveId || newRelId("recv"),
+    jobNo: currentRelJobNo,
+    date: document.getElementById("rec_date").value.trim(),
+    from: document.getElementById("rec_from").value.trim(),
+    subject: document.getElementById("rec_subject").value.trim(),
+    actionRequired: document.getElementById("rec_action").value.trim(),
+    repliedOn: document.getElementById("rec_repliedOn").value.trim(),
+    fileLink: document.getElementById("rec_filelink").value.trim(),
+  };
+  if(editingReceiveId){
+    const idx = STATE.receive.findIndex(d=>d.id===editingReceiveId);
+    if(idx>-1) STATE.receive[idx] = rec;
+    if(cloudEnabled()) apiPost("updateReceive", rec);
+    showToast("Receive entry updated");
+    editingReceiveId = null;
+    document.getElementById("btnAddReceive").textContent = "+ Add Receive Entry";
+  } else {
+    STATE.receive.push(rec);
+    if(cloudEnabled()) apiPost("addReceive", rec);
+    showToast("Receive entry added");
+  }
+  saveState();
+  renderReceiveList();
+  ["rec_date","rec_from","rec_subject","rec_action","rec_repliedOn","rec_filelink"].forEach(id=>document.getElementById(id).value="");
+});
+
+document.getElementById("viewCloseBtn").addEventListener("click", ()=>viewOverlay.classList.remove("open"));
+viewOverlay.addEventListener("click", (e)=>{ if(e.target===viewOverlay) viewOverlay.classList.remove("open"); });
+
+/* ================= FILTER / SORT EVENTS ================= */
+document.getElementById("searchInput").addEventListener("input", ()=>{ statCustomFilter=null; currentPage=1; renderTable(); });
+document.getElementById("filterFileStatus").addEventListener("change", ()=>{ statCustomFilter=null; currentPage=1; renderTable(); });
+document.getElementById("filterInvoiceStatus").addEventListener("change", ()=>{ statCustomFilter=null; currentPage=1; renderTable(); });
+document.getElementById("filterCategory").addEventListener("change", ()=>{ statCustomFilter=null; currentPage=1; renderTable(); });
+document.getElementById("prevPage").addEventListener("click", ()=>{ if(currentPage>1){currentPage--; renderTable();} });
+document.getElementById("nextPage").addEventListener("click", ()=>{ currentPage++; renderTable(); });
+document.querySelectorAll("thead th[data-sort]").forEach(th=>{
+  th.addEventListener("click", ()=>{
+    const key = th.dataset.sort;
+    if(sortKey===key) sortDir *= -1; else { sortKey = key; sortDir = 1; }
+    renderTable();
+  });
+});
+
+/* ================= CSV IMPORT / EXPORT ================= */
+document.getElementById("btnExport").addEventListener("click", ()=>{
+  const headers = ["jobNo","date","vessel","instruction","category","client","secondaryClient","admiraltySuit","fileStatus","invoiceType","invoiceStatus","invoiceAmount","securityType","bgAmount","securityExpiryDate","instructingParty","personInCharge","address"];
+  const csvRows = [headers.join(",")];
+  STATE.jobs.forEach(j=>{
+    const row = headers.map(h=>{
+      const v = (j[h]||"").toString().replace(/"/g,'""');
+      return `"${v}"`;
+    });
+    csvRows.push(row.join(","));
+  });
+  const blob = new Blob([csvRows.join("\n")], {type:"text/csv;charset=utf-8;"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "Job_Register_Demo_Export.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("CSV exported");
+});
+
+document.getElementById("btnImport").addEventListener("click", ()=>{
+  if(!requireLogin()) return;
+  document.getElementById("fileImport").click();
+});
+document.getElementById("fileImport").addEventListener("change", (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = async (ev)=>{
+    try{
+      const text = ev.target.result;
+      const lines = text.split(/\r?\n/).filter(l=>l.trim().length);
+      const headers = parseCsvLine(lines[0]).map(h=>h.trim());
+      let added = 0;
+      const newJobs = [];
+      for(let i=1;i<lines.length;i++){
+        const cols = parseCsvLine(lines[i]);
+        const obj = {};
+        headers.forEach((h,idx)=> obj[h] = cols[idx] || "");
+        const job = {
+          id: "import-" + Date.now() + "-" + i,
+          jobNo: obj.jobNo || obj["JOB NO"] || "",
+          date: obj.date || obj["DATE"] || "",
+          vessel: obj.vessel || obj["VESSEL"] || obj["VESSEL NAME/SUBJECT MATTER"] || "",
+          instruction: obj.instruction || obj["INSTRUCTION"] || "",
+          client: obj.client || obj["PRINCIPAL CLIENT"] || "",
+          secondaryClient: obj.secondaryClient || obj["SECONDARY CLIENT"] || obj["ASSOCIATED CLIENT"] || "",
+          admiraltySuit: obj.admiraltySuit || obj["ADMIRALTY SUIT"] || "",
+          fileStatus: obj.fileStatus || obj["FILE STATUS"] || "",
+          invoiceType: obj.invoiceType || obj["INVOICE TYPE"] || "",
+          invoiceStatus: obj.invoiceStatus || obj["INVOICE STATUS"] || obj["FINAL INVOICE STATUS"] || "",
+          invoiceAmount: obj.invoiceAmount || obj["INVOICE AMOUNT"] || "",
+          securityType: obj.securityType || obj["SECURITY"] || obj["SECURITY TYPE"] || "",
+          bgAmount: obj.bgAmount || obj["BG AMOUNT"] || "",
+          securityExpiryDate: obj.securityExpiryDate || obj["SECURITY EXPIRY DATE"] || obj["SECURITY EXPIRY"] || "",
+          instructingParty: obj.instructingParty || obj["INSTRUCTING PARTY"] || "",
+          personInCharge: obj.personInCharge || obj["PERSON IN CHARGE"] || "",
+          address: obj.address || obj["ADDRESS"] || "",
+        };
+        job.category = obj.category || autoCategory(job.instruction);
+        if(job.vessel || job.jobNo){ STATE.jobs.push(job); newJobs.push(job); added++; }
+      }
+      saveState();
+      refreshAll();
+      showToast(added + " job(s) imported");
+      if(cloudEnabled() && newJobs.length){
+        showToast("Syncing " + newJobs.length + " imported job(s) to cloud…");
+        for(const job of newJobs){ await apiPost("addJob", job); }
+        showToast("Cloud sync complete");
+      }
+    }catch(err){
+      console.error(err);
+      showToast("Import failed — check CSV format");
+    }
+    e.target.value = "";
+  };
+  reader.readAsText(file);
+});
+
+function parseCsvLine(line){
+  const out = []; let cur=""; let inQ=false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(inQ){
+      if(c==='"'){ if(line[i+1]==='"'){ cur+='"'; i++; } else inQ=false; }
+      else cur+=c;
+    } else {
+      if(c==='"') inQ=true;
+      else if(c===','){ out.push(cur); cur=""; }
+      else cur+=c;
+    }
+  }
+  out.push(cur);
+  return out;
+}
+
+/* ================= INIT ================= */
+/* ===== DEMO DATA (fictional) — generated at load time so expiry alerts always look current ===== */
+(function(){
+  let s = 20260101;
+  const rnd = () => { s = (s * 1664525 + 1013904223) % 4294967296; return s / 4294967296; };
+  const pick = a => a[Math.floor(rnd()*a.length)];
+  const fmt = d => (d.getMonth()+1) + "/" + d.getDate() + "/" + d.getFullYear();
+
+  const prefixes = ["MV","MT","MV","MV"];
+  const names = ["SEA HORIZON","BLUE LAGOON","NORTH STAR","GOLDEN TIDE","OCEAN BREEZE","SILVER WAVE","PACIFIC DAWN","CORAL BAY","IRON CREST","AMBER SKY","HARBOR LIGHT","STORM PETREL","CRIMSON ARROW","JADE MERIDIAN","LUNA VISTA","TIDEWATER ONE","POLAR SPIRIT","COBALT RIDGE","EMERALD COVE","SWIFT ANCHOR","DESERT ROSE","MISTRAL","KESTREL","ALBATROSS","SANDPIPER"];
+  const clients = ["Northwind P&I Club","Harbor Mutual Insurance","Pacific Star Shipping","Orion Marine Insurance","Blue Anchor Lines","Meridian Cargo Ltd","Atlas Logistics","Crestline Underwriters","Evergreen Bulk Carriers"];
+  const parties = ["Northwind P&I Club","Harbor Mutual Insurance","Orion Marine Insurance","Sample Law Chambers","Atlas Logistics Ltd","Blue Anchor Lines"];
+  const people = ["Alex Morgan","Sam Taylor","Jordan Lee","Casey Brooks","Riley Quinn"];
+  const addresses = ["12 Harbour Road, Sample City","45 Dockside Avenue, Port Town","8 Marina Street, Bay Harbour","221 Wharf Lane, Seaview"];
+  const templates = [
+    ["Draft survey & discharge monitoring"],["Tally survey & cargo discharge monitoring"],["Ullage survey"],
+    ["Cargo shortage claim handling"],["Wet damage of cargo survey"],["Collision with another vessel"],
+    ["Crew injury investigation"],["General average claim"],["Damage survey after grounding"],
+    ["Arrest of the vessel"],["Arrest & release of the vessel"],["Legal opinion on charterparty dispute"],
+    ["Arbitral award enforcement"],["Admiralty suit initiation"],["Legal representation in court"],
+    ["Customs penalty dispute"],["Crew repatriation"],["Document delivery"],["Sale & purchase consultancy"],["Bid preparation for auction"]
+  ];
+
+  const jobs = [];
+  const now = new Date();
+  for(let i = 0; i < 96; i++){
+    const jobNo = String(101 + i);
+    const year = 2014 + Math.floor((i / 96) * 13);           // 2014 .. 2026
+    const maxMonth = (year === now.getFullYear()) ? now.getMonth() : 11;
+    const d = new Date(year, Math.floor(rnd()*(maxMonth+1)), 1 + Math.floor(rnd()*27));
+    const instr = pick(templates)[0];
+    const isLegal = /arrest|suit|opinion|arbitral|representation|customs/i.test(instr);
+    const hasSuit = /arrest|suit/i.test(instr);
+    const client = pick(clients);
+    const running = (year >= now.getFullYear()) ? rnd() < 0.6 : rnd() < 0.04;
+    const invRoll = rnd();
+    const invoiceStatus = running ? "" : (invRoll < 0.82 ? "Issued & received" : (invRoll < 0.93 ? "Issued but Not received" : "NOT ISSUED"));
+    const hasSecurity = hasSuit && rnd() < 0.8;
+    let securityType = "", bgAmount = "", securityExpiryDate = "";
+    if(hasSecurity){
+      securityType = rnd() < 0.55 ? "Letter of Undertaking" : "Bank Guarantee";
+      bgAmount = "$" + (5 + Math.floor(rnd()*45)) + ",000.00";
+      if(running){
+        const exp = new Date(now.getTime() + (Math.floor(rnd()*150) - 15) * 86400000); // some expired / expiring soon
+        securityExpiryDate = fmt(exp);
+      }
+    }
+    jobs.push({
+      jobNo, date: fmt(d),
+      vessel: pick(prefixes) + " " + pick(names),
+      instruction: instr,
+      client,
+      secondaryClient: rnd() < 0.35 ? pick(clients) : "",
+      admiraltySuit: hasSuit ? (1 + Math.floor(rnd()*90)) + " of " + year : "",
+      fileStatus: running ? "RUNNING" : "CLOSED",
+      invoiceType: running ? "" : (rnd() < 0.3 ? "Interim" : "Final"),
+      invoiceStatus,
+      invoiceAmount: running ? "" : "$" + (800 + Math.floor(rnd()*9000)).toLocaleString("en-US") + ".00",
+      securityType, bgAmount, securityExpiryDate,
+      instructingParty: pick(parties),
+      address: pick(addresses),
+      personInCharge: pick(people)
+    });
+  }
+  window.SEED_JOBS = jobs;
+
+  // A few sample linked records for the first running jobs, so the demo shows the whole workflow
+  const running = jobs.filter(j=>j.fileStatus==="RUNNING").slice(0,4);
+  const docs = [], disp = [], recv = [];
+  running.forEach((j,idx)=>{
+    docs.push({ id:"demo-doc-"+idx+"a", jobNo:j.jobNo, docType:"Invoice", description:"Interim invoice", status:"Issued", fileLink:"", amount:"$2,400.00", expiryDate:"", remarks:"Sample record" });
+    docs.push({ id:"demo-doc-"+idx+"b", jobNo:j.jobNo, docType:"Power of Attorney", description:"Signed POA", status:"Received", fileLink:"", amount:"", expiryDate:"", remarks:"" });
+    disp.push({ id:"demo-disp-"+idx, jobNo:j.jobNo, date:fmt(new Date(now.getTime()-86400000*(3+idx))), to:j.client, subject:"Status update and fee note", mode:"Email", fileLink:"", replyExpected:"Yes", replyReceived: idx%2? "Yes":"No" });
+    recv.push({ id:"demo-recv-"+idx, jobNo:j.jobNo, date:fmt(new Date(now.getTime()-86400000*(1+idx))), from:j.instructingParty, subject:"Instructions and supporting documents", actionRequired:"Review and reply", repliedOn:"", fileLink:"" });
+  });
+  window.SEED_DOCS = docs; window.SEED_DISPATCH = disp; window.SEED_RECEIVE = recv;
+})();
+
+/* ================= INSIGHTS DASHBOARD ================= */
+const CHART_COLORS = ["#2596BE","#152038","#1e8f57","#b4790e","#c23c46","#7a5cc9","#c96f9e","#4a90a4","#9aa5b8","#e0a72e"];
+let chartInstances = {};
+
+function destroyChart(id){
+  if(chartInstances[id]){ chartInstances[id].destroy(); delete chartInstances[id]; }
+}
+
+function countBy(arr, keyFn){
+  const map = {};
+  arr.forEach(item=>{
+    const k = (keyFn(item) || "—").toString().trim() || "—";
+    map[k] = (map[k]||0) + 1;
+  });
+  return map;
+}
+
+function normFileStatusLabel(s){
+  const n = normStatus(s);
+  if(n.includes("running")) return "Running";
+  if(n.includes("closed")) return "Closed";
+  return "Unspecified";
+}
+function normInvoiceStatusLabel(s){
+  const n = normStatus(s);
+  if(!n) return "Unspecified";
+  if(n.includes("not received")) return "Issued, Not Received";
+  if(n.includes("received")) return "Received";
+  if(n.includes("not issued")) return "Not Issued";
+  if(n.includes("issued")) return "Issued";
+  return "Other";
+}
+function extractYear(dateStr){
+  if(!dateStr) return null;
+  const m = dateStr.match(/(\d{4})/);
+  if(m) return m[1];
+  const d = new Date(dateStr);
+  if(!isNaN(d.getTime())) return d.getFullYear().toString();
+  return null;
+}
+
+function renderInsightsKpis(){
+  const jobs = STATE.jobs;
+  const docs = STATE.documents;
+  const dispatch = STATE.dispatch;
+  const receive = STATE.receive;
+  const clients = new Set(
+    jobs.flatMap(j=>[(j.client||"").trim(), (j.secondaryClient||"").trim()]).filter(Boolean)
+  );
+  const claimsCount = jobs.filter(j=>j.category===GROUP_CLAIMS).length;
+  const legalCount = jobs.filter(j=>j.category===GROUP_LEGAL).length;
+  const othersCount = jobs.filter(j=>j.category===GROUP_OTHERS).length;
+  const kpis = [
+    { n: jobs.length, l: "Total Jobs" },
+    { n: claimsCount, l: "Claims", color: GROUP_COLORS[GROUP_CLAIMS] },
+    { n: legalCount, l: "Legal", color: GROUP_COLORS[GROUP_LEGAL] },
+    { n: othersCount, l: "Others", color: GROUP_COLORS[GROUP_OTHERS] },
+    { n: clients.size, l: "Total Clients" },
+    { n: docs.length, l: "Documents Tracked" },
+    { n: dispatch.length, l: "Dispatch Entries" },
+    { n: receive.length, l: "Receive Entries" },
+    { n: docs.filter(d=>d.status==="Expired").length, l: "Expired Documents" },
+  ];
+  document.getElementById("insightsKpis").innerHTML = kpis.map(k=>`
+    <div class="kpi" ${k.color?`style="border-top:3px solid ${k.color};"`:""}><div class="n">${k.n}</div><div class="l">${escapeHtml(k.l)}</div></div>
+  `).join("");
+}
+
+function makeDoughnut(canvasId, dataMap, colorMap){
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  const labels = Object.keys(dataMap);
+  const values = Object.values(dataMap);
+  const colors = colorMap ? labels.map(l=>colorMap[l] || "#9aa5b8") : CHART_COLORS;
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: "doughnut",
+    data: { labels, datasets: [{ data: values, backgroundColor: colors, borderWidth: 1, borderColor: "#fff" }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10.5 } } } },
+    }
+  });
+}
+
+function makeBar(canvasId, dataMap, horizontal){
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  const entries = Object.entries(dataMap).sort((a,b)=>b[1]-a[1]).slice(0, 12);
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: entries.map(e=>e[0]),
+      datasets: [{ data: entries.map(e=>e[1]), backgroundColor: "#2596BE" }],
+    },
+    options: {
+      indexAxis: horizontal ? "y" : "x",
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { x: { ticks: { font: { size: 10 } } }, y: { ticks: { font: { size: 10 } } } },
+    }
+  });
+}
+
+function makeStackedYearlyByCategory(canvasId, jobs){
+  destroyChart(canvasId);
+  const ctx = document.getElementById(canvasId);
+  const jobsWithYear = jobs.filter(j=>extractYear(j.date));
+  const years = [...new Set(jobsWithYear.map(j=>extractYear(j.date)))].sort();
+  const cats = ALL_CATEGORIES.length ? ALL_CATEGORIES : [DEFAULT_CATEGORY];
+
+  const datasets = cats.map(cat=>{
+    const data = years.map(y=> jobsWithYear.filter(j=> extractYear(j.date)===y && (j.category||DEFAULT_CATEGORY)===cat ).length );
+    return { label: cat, data, backgroundColor: GROUP_COLORS[cat] || nextCategoryColor() };
+  });
+
+  chartInstances[canvasId] = new Chart(ctx, {
+    type: "bar",
+    data: { labels: years, datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10.5 } } } },
+      scales: {
+        x: { stacked: true, ticks: { font: { size: 10 } } },
+        y: { stacked: true, beginAtZero: true, ticks: { font: { size: 10 } } },
+      },
+    }
+  });
+}
+
+function renderGrowthOutlook(jobs){
+  const yearMap = countBy(jobs.filter(j=>extractYear(j.date)), j=>extractYear(j.date));
+  let years = Object.keys(yearMap).map(y=>parseInt(y,10)).filter(y=>!isNaN(y)).sort((a,b)=>a-b);
+  const nowYear = new Date().getFullYear();
+  // Drop an obviously incomplete current year from the trend calc, but keep showing it on the chart.
+  const trendYears = years.filter(y=>y < nowYear);
+  const lastFew = trendYears.slice(-4);
+
+  let avgDelta = 0;
+  if(lastFew.length >= 2){
+    const diffs = [];
+    for(let i=1;i<lastFew.length;i++){
+      diffs.push((yearMap[lastFew[i]]||0) - (yearMap[lastFew[i-1]]||0));
+    }
+    avgDelta = diffs.reduce((a,b)=>a+b,0) / diffs.length;
+  }
+
+  const lastYear = years.length ? years[years.length-1] : nowYear;
+  const lastValue = yearMap[lastYear] || 0;
+  const projYear1 = lastYear + 1, projYear2 = lastYear + 2;
+  const projValue1 = Math.max(0, Math.round(lastValue + avgDelta));
+  const projValue2 = Math.max(0, Math.round(lastValue + avgDelta*2));
+
+  const allLabels = [...years.map(String), String(projYear1), String(projYear2)];
+  const historicalData = years.map(y=>yearMap[y]||0);
+  const projectedData = new Array(years.length).fill(null).concat([projValue1, projValue2]);
+  const historicalPadded = historicalData.concat([null, null]);
+  // connect the last actual point into the projection line
+  if(historicalPadded.length >= years.length+1){
+    projectedData[years.length-1] = historicalData[historicalData.length-1];
+  }
+
+  destroyChart("chartGrowth");
+  const ctx = document.getElementById("chartGrowth");
+  chartInstances["chartGrowth"] = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: allLabels,
+      datasets: [
+        { label: "Actual Jobs", data: historicalPadded, backgroundColor: "#152038", order: 2 },
+        { label: "Projected", type: "line", data: projectedData, borderColor: "#2596BE", backgroundColor: "#2596BE", borderDash: [6,4], tension: 0.2, pointRadius: 4, order: 1 },
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: "bottom", labels: { boxWidth: 10, font: { size: 10.5 } } } },
+      scales: { y: { beginAtZero: true, ticks: { font: { size: 10 } } }, x: { ticks: { font: { size: 10 } } } },
+    }
+  });
+
+  // ---- Recommendations (computed from the actual data) ----
+  const recs = [];
+
+  const trendLabel = avgDelta > 0.5 ? "growing" : (avgDelta < -0.5 ? "declining" : "roughly flat");
+  recs.push(`Job volume has been <b>${trendLabel}</b> in recent years (avg ${avgDelta>=0?"+":""}${avgDelta.toFixed(1)} jobs/year). At this pace, ${projYear1} is projected around <b>${projValue1}</b> jobs and ${projYear2} around <b>${projValue2}</b>.`);
+
+  const clientCounts = countBy(jobs, j=>j.client||"Unspecified");
+  const totalJobs = jobs.length || 1;
+  const topClientEntry = Object.entries(clientCounts).sort((a,b)=>b[1]-a[1])[0];
+  if(topClientEntry){
+    const pct = Math.round((topClientEntry[1]/totalJobs)*100);
+    if(pct >= 25){
+      recs.push(`<b>${escapeHtml(topClientEntry[0])}</b> accounts for ${pct}% of all jobs — client concentration risk. Prioritize diversifying the client base to protect growth if this relationship slows down.`);
+    } else {
+      recs.push(`Client base looks reasonably diversified — top client (${escapeHtml(topClientEntry[0])}) is only ${pct}% of total jobs.`);
+    }
+  }
+
+  if(trendYears.length >= 2){
+    const recentYear = trendYears[trendYears.length-1];
+    const prevYear = trendYears[trendYears.length-2];
+    const recentCats = countBy(jobs.filter(j=>extractYear(j.date)===String(recentYear)), j=>j.category||DEFAULT_CATEGORY);
+    const prevCats = countBy(jobs.filter(j=>extractYear(j.date)===String(prevYear)), j=>j.category||DEFAULT_CATEGORY);
+    let bestCat = null, bestGrowth = 0;
+    Object.keys(recentCats).forEach(cat=>{
+      const growth = (recentCats[cat]||0) - (prevCats[cat]||0);
+      if(growth > bestGrowth){ bestGrowth = growth; bestCat = cat; }
+    });
+    if(bestCat){
+      recs.push(`<b>${escapeHtml(bestCat)}</b> grew the most from ${prevYear} to ${recentYear} (+${bestGrowth} jobs). Consider marketing this service line more actively to sustain momentum.`);
+    }
+  }
+
+  const invoicePending = jobs.filter(j=>{
+    const s = normStatus(j.invoiceStatus);
+    return s.includes("not issued") || s.includes("issued but not");
+  }).length;
+  if(invoicePending > 0){
+    const pct = Math.round((invoicePending/totalJobs)*100);
+    recs.push(`${invoicePending} job(s) (${pct}%) have invoices not yet issued or not received. Tightening invoice follow-up can free up cash to reinvest in growth.`);
+  }
+
+  const runningCount = jobs.filter(j=>normStatus(j.fileStatus).includes("running")).length;
+  if(runningCount > 0){
+    recs.push(`${runningCount} file(s) are still marked Running. Closing out aging files faster improves team capacity to take on new business.`);
+  }
+
+  document.getElementById("growthRecommendations").innerHTML = recs.length
+    ? recs.map(r=>`<div class="rec-item">${r}</div>`).join("")
+    : `<div class="rel-empty">Not enough historical data yet to generate recommendations.</div>`;
+}
+
+function renderInsights(){
+  renderInsightsKpis();
+  const jobs = STATE.jobs;
+  makeDoughnut("chartFileStatus", countBy(jobs, j=>normFileStatusLabel(j.fileStatus)));
+  makeDoughnut("chartInvoiceStatus", countBy(jobs, j=>normInvoiceStatusLabel(j.invoiceStatus)));
+  makeDoughnut("chartCategory", countBy(jobs, j=>j.category||DEFAULT_CATEGORY), GROUP_COLORS);
+  makeBar("chartClients", countBy(jobs, j=>j.client||"Unspecified"), true);
+  makeStackedYearlyByCategory("chartYearly", jobs);
+  makeBar("chartDocTypes", countBy(STATE.documents, d=>d.docType||"Other"), false);
+  makeDoughnut("chartDocStatus", countBy(STATE.documents, d=>d.status||"Unspecified"));
+  renderGrowthOutlook(jobs);
+}
+
+document.getElementById("btnInsights").addEventListener("click", ()=>{
+  document.getElementById("insightsOverlay").classList.add("open");
+  // slight delay so canvas has layout dimensions before Chart.js renders
+  setTimeout(renderInsights, 30);
+});
+document.getElementById("insightsCloseBtn").addEventListener("click", ()=>{
+  document.getElementById("insightsOverlay").classList.remove("open");
+});
+document.getElementById("insightsOverlay").addEventListener("click", (e)=>{
+  if(e.target.id === "insightsOverlay") document.getElementById("insightsOverlay").classList.remove("open");
+});
+
+initApp();
+</script>
+</body>
+</html>
